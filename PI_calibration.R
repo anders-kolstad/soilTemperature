@@ -205,17 +205,19 @@ BLG$std.Broad_leaved_grasses <- scale(BLG$Broad_leaved_grasses)
 # center continous covariates
 BLG$c.Broad_leaved_grasses <- BLG$Broad_leaved_grasses-mean(BLG$Broad_leaved_grasses)
 # tidy dtaframe
-BLG <- select(BLG, DW = BLG_DW_g, 
+BLG2 <- select(BLG, DW = BLG_DW_g, 
+              Hits = Broad_leaved_grasses,
               c.Hits = c.Broad_leaved_grasses,
               std.Hits =std.Broad_leaved_grasses)
-
+BLG <- as.data.frame(BLG2)
 
 
 #1. Bundle data
 
-X_BLG <- model.matrix(~ c.Hits , data = BLG)   # keeping the intercept, but remember model is only valid of #hits >0
-K <- ncol(X_BLG)  
-head(X_BLG)
+X_BLG <- model.matrix(~ Hits , data = BLG)   # keeping the intercept, but remember model is only valid of #hits >0
+K <- ncol(X_BLG) 
+X_BLG <- as.matrix(X_BLG)
+X_BLG
 K
 
 #Random effects:
@@ -236,7 +238,7 @@ setwd("M:\\Anders L Kolstad\\R\\R_projects\\soilTemperature")
 sink("BLG.txt")
 cat("
 model{
-    #1A. Priors beta and r
+    #1A. Priors betas
     for (i in 1:K) { beta[i] ~  dunif(0, 50)}   
 
     #1B. Priors random effects 
@@ -265,7 +267,7 @@ sink()
 # Step 4: Initial values & parameters to save   # R syntax
 inits  <- function () {
   list(
-    beta  = runif(K, 0, 20),
+    beta  = runif(2, 0, 20),
     r     = runif(1, 0, 10))  }
 
 
