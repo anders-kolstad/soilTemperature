@@ -163,6 +163,7 @@ boxplot(dat2$within_moss_DW_gmsq, main = "Within moss", xlab = "Total DW", ylab 
 
 
 # BLG ####
+
 par(mfrow = c(1,1), mar = c(5,5,7,2))
 plot(dat2$Broad_leaved_grasses, dat2$BLG_DW_g,  main = "BLG",  pch = 20) # saturates - non-linear
 
@@ -195,6 +196,7 @@ plot(dat2$Broad_leaved_grasses, dat2$BLG_DW_g,  main = "BLG",  pch = 20) # satur
 ##Step 1: Fit the model.
 #Use MCMC to estimate the parameters 
 
+
 # Step 0. Get data
 BLG <- filter(dat2, Broad_leaved_grasses != 0 & BLG_DW_g != 0)
 
@@ -210,8 +212,11 @@ BLG2 <- select(BLG, DW = BLG_DW_g,
               c.Hits = c.Broad_leaved_grasses,
               std.Hits =std.Broad_leaved_grasses)
 BLG <- as.data.frame(BLG2)
-
-
+View(BLG)
+save(BLG, file = "BLG.rda")
+#setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
+#load("BLG.rda")
+names(BLG)
 #1. Bundle data
 
 X_BLG <- model.matrix(~ Hits , data = BLG)   # keeping the intercept, but remember model is only valid of #hits >0
@@ -219,6 +224,8 @@ K <- ncol(X_BLG)
 X_BLG <- as.matrix(X_BLG)
 X_BLG
 K
+  
+#mean(BLG$DW) #9.75
 
 #Random effects:
 #None
@@ -233,36 +240,43 @@ JAGS.data
 # Y data should be all positive. X data should be standardised
 
 
-# Step 3: JAGS modelling code
+
+
+
 setwd("M:\\Anders L Kolstad\\R\\R_projects\\soilTemperature")
 sink("BLG.txt")
 cat("
 model{
     #1A. Priors betas
-    for (i in 1:K) { beta[i] ~  dunif(0, 50)}   
+    for (i in 1:K) { beta[i] ~  dunif(0, 20)}   
 
     #1B. Priors random effects 
     # not applicable
 
     #1C. Prior for r parameter of Gamma distribution
-    r ~ dunif(0, 1000)
+    r ~ dunif(0, 10)
 
     #2. Likelihood
     for (i in 1:N) {
       Y[i]        ~ dgamma(r, mu.eff[i])
-      mu.eff[i]  <- r / mu[i]     
-      mu[i] <- inprod(beta[], X[i,]) }                      # removed log-link
-            
-
+      mu.eff[i]  <- r / mu[i]
+      mu[i] <- eta[i] 
+      eta[i] <- inprod(beta[], X[i,]) }
     #3. Discrepancy measures: Pearson residuals   
-        for (i in 1:N) {
-           VarY[i] <- mu[i]^2 / r
-           PRes[i] <- (Y[i] - mu[i]) / sqrt(VarY[i])}
-    # back-standardice output
-        # skipping this in the model syntax this time
+    for (i in 1:N) {
+        VarY[i] <- mu[i]^2 / r
+        PRes[i] <- (Y[i] - mu[i]) / sqrt(VarY[i])}
+        
          }
 ",fill = TRUE)
 sink()
+
+
+
+
+
+
+
 
 # Step 4: Initial values & parameters to save   # R syntax
 inits  <- function () {
@@ -274,7 +288,7 @@ inits  <- function () {
 # Step 5: Specify what to save
 params <- c("beta", #Regression parameters
             "r",    # gamma parameter
-            "mu",
+            "mu" ,
             "PRes")  
 
 
@@ -308,7 +322,7 @@ MyBUGSChains(out,
 OUT1    <- MyBUGSOutput(out, 
                         c(uNames("beta", K), "r"),
                         VarNames = MyNames)
-print(OUT1, digits = 5)  # based on standardised covaraites
+print(OUT1, digits = 5)  # based on original covaraites
 
 
 # Model validation:
@@ -325,7 +339,7 @@ abline(h = 0, lty = 2, col = 1)
 # Ok
 
 plot(y = E1, 
-     x = BLG$std.Broad_leaved_grasses)
+     x = BLG$c.Hits)
 abline(h = 0, lty = 2)
 # Ok, same as above, just differently scaled axis
 
@@ -350,22 +364,16 @@ dim(beta.mcmc)  #15000 iterations saved - should be increased later...
 
 
 
-beta.mcmc2 <- beta.mcmc
-head(beta.mcmc)
-beta.mcmc[,2] <- (beta.mcmc2[,2] * sd(BLG$BLG_DW_g)) / sd(BLG$std.Broad_leaved_grasses)
-
-
-
 #2A. Define a grid of covariate values
 #   without extrapolation
-range(BLG$std.Broad_leaved_grasses)
-min(BLG$std.Broad_leaved_grasses)
-MyData <- data.frame(std.Broad_leaved_grasses = seq(from = min(BLG$std.Broad_leaved_grasses), 
-                                                    to = max(BLG$std.Broad_leaved_grasses), length = 50))
+range(BLG$Hits)
+
+MyData <- data.frame(Hits = seq(from = min(BLG$Hits), 
+                                    to = max(BLG$Hits), length = 50))
 head(MyData)
 
 #B. Convert the covariate values into an X matrix
-Xp <- model.matrix(~ std.Broad_leaved_grasses, 
+Xp <- model.matrix(~ Hits, 
                    data = MyData) 
 
 
@@ -408,7 +416,7 @@ MyData2 <- cbind(MyData,L)
 head(MyData2)
 
 # Back-standardize covariate
-MyData2$BLG_hits <- MyData$std.Broad_leaved_grasses * sd(BLG$Broad_leaved_grasses) + mean(BLG$Broad_leaved_grasses)
+#MyData2$BLG_hits <- MyData$c.Hits + mean(BLG$c.Hits)
 
 
 
@@ -418,13 +426,13 @@ MyData2$BLG_hits <- MyData$std.Broad_leaved_grasses * sd(BLG$Broad_leaved_grasse
 
 p <- ggplot() +
       geom_point(data = BLG, 
-                    aes(x = Broad_leaved_grasses, 
-                        y = BLG_DW_g))+
+                    aes(x = Hits, 
+                        y = DW))+
   geom_line(data = MyData2, 
-                   aes(x = BLG_hits, 
+                   aes(x = Hits, 
                        y = mean))+
   geom_ribbon(data = MyData2,
-                     aes(x = BLG_hits, 
+                     aes(x = Hits, 
                          ymax = up, 
                          ymin = lo), 
                      alpha = 0.5)+
@@ -435,10 +443,11 @@ p <- ggplot() +
   theme(plot.title = element_text(hjust = 0.5))
 p
 
-
+est <- print(OUT1, digits = 5) 
+est[2]
 pHist <- ggplot(data = as.data.frame(beta.mcmc), aes(x = beta.mcmc[,2]))+
   geom_histogram(bins = 30)+
-  annotate("segment", x = mean(beta.mcmc[,2]), xend = mean(beta.mcmc[,2]), y = 0, yend = 2000,
+  annotate("segment", x = mean(beta.mcmc[,2]), xend = mean(beta.mcmc[,2]), y = 0, yend = 2200,
            colour = "blue", size = 1.5)+
   annotate("segment", x = quantile(beta.mcmc[,2], probs = 0.975), xend = quantile(beta.mcmc[,2], probs = 0.975), 
            y = 0, yend = 500,
@@ -446,14 +455,18 @@ pHist <- ggplot(data = as.data.frame(beta.mcmc), aes(x = beta.mcmc[,2]))+
   annotate("segment", x = quantile(beta.mcmc[,2], probs = 0.025), xend = quantile(beta.mcmc[,2], probs = 0.025), 
            y = 0, yend = 500,
            colour = "red", size = 1.5)+
-  annotate("text", x = 13, y = 1800, size = 5, label = "Mean = 9.4662")+
+  annotate("text", -Inf, Inf,  
+           label = paste("mean = ", round(est[2], 2), sep = " "),
+           hjust = -2.5, vjust = 2, size = 5,)+
   theme(text = element_text(size=15)) +
-  xlab("Estimated slope")
+  theme(text = element_text(size=15)) +
+  xlab("Estimated slope")+
+  xlim(2, 11)
 pHist
 
 pHist_I <- ggplot(data = as.data.frame(beta.mcmc), aes(x = beta.mcmc[,1]))+
   geom_histogram(bins = 30)+
-  annotate("segment", x = mean(beta.mcmc[,1]), xend = mean(beta.mcmc[,1]), y = 0, yend = 2000,
+  annotate("segment", x = mean(beta.mcmc[,1]), xend = mean(beta.mcmc[,1]), y = 0, yend = 3000,
            colour = "blue", size = 1.5)+
   annotate("segment", x = quantile(beta.mcmc[,1], probs = 0.975), xend = quantile(beta.mcmc[,1], probs = 0.975), 
            y = 0, yend = 500,
@@ -461,9 +474,12 @@ pHist_I <- ggplot(data = as.data.frame(beta.mcmc), aes(x = beta.mcmc[,1]))+
   annotate("segment", x = quantile(beta.mcmc[,1], probs = 0.025), xend = quantile(beta.mcmc[,1], probs = 0.025), 
            y = 0, yend = 500,
            colour = "red", size = 1.5)+
-  annotate("text", x = 13, y = 1800, size = 5, label = "Mean = 9.4893")+
+  annotate("text", -Inf, Inf,  
+           label = paste("mean = ", round(est[1], 2), sep = " "),
+           hjust = -2.5, vjust = 2, size = 5,)+
   theme(text = element_text(size=15)) +
-  xlab("Estimated intercept")
+  xlab("Estimated intercept")+
+  xlim(0, 2)
 pHist_I
 
 
@@ -472,7 +488,9 @@ library(gridExtra)
 grid.arrange(arrangeGrob(p, ncol = 1, nrow=1), 
              arrangeGrob(pHist, pHist_I, ncol = 2, nrow = 1))
 
-
+ggsave(filename = "BLG_model.tiff", height = 10, width = 10,
+       plot = grid.arrange(arrangeGrob(p, ncol = 1, nrow=1), 
+                           arrangeGrob(pHist, pHist_I, ncol = 2, nrow = 1)))
 
 
 
@@ -482,3 +500,44 @@ par(mfrow = c(1,1), mar = c(5,5,5,2))
 plot(dat2$Broad_leaved_grasses, dat2$BLG_DW_g,  main = "BLG",  pch = 20) 
 summary(lm(dat2$BLG_DW_g~dat2$Broad_leaved_grasses))
 abline(lm(dat2$BLG_DW_g~dat2$Broad_leaved_grasses))
+
+
+
+
+
+# TEST
+# Step 3: JAGS modelling code
+setwd("M:\\Anders L Kolstad\\R\\R_projects\\soilTemperature")
+sink("BLG.txt")
+cat("
+model{
+    #Priors 
+    a ~ dunif(0, 20)
+    b ~ dunif(0, 20)
+    r ~ dunif(0, 10)
+
+    #Likelihood
+    for (i in 1:N) {
+      Y[i]        ~ dgamma(r, mu.eff[i])
+      mu.eff[i]  <- r / mu[i]
+      mu[i] <- eta[i] 
+      eta[i] <- a + b*X[i]}                      
+         }
+",fill = TRUE)
+sink()
+# Step 5: Specify what to save
+params <- c("a", #Regression parameters
+            "r",    # gamma parameter
+            "b"
+)  
+# Step 4: Initial values & parameters to save   # R syntax
+inits  <- function () {
+  list(
+    a  = runif(1, 0, 20),
+    b  = runif(1, 0, 20),
+    r     = runif(1, 0, 10))  }
+
+# get better names and back-centering the intercept
+c.intercept <- beta[1]
+intercept   <- beta[1] - beta[2]*mean(X[,2])
+slope       <- beta[2] 
