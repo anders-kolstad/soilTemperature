@@ -1011,3 +1011,248 @@ ggsave(filename = "NLG_model.tiff", height = 10, width = 10,
                            arrangeGrob(pHist, pHist_I, p2, ncol = 3, nrow = 1)))
 
 
+
+# BLS ####
+
+setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
+load("BLS.rda")
+names(BLS)
+plot(BLS$Hits, BLS$DW)
+#1. Bundle data
+
+X_BLS <- model.matrix(~ Hits , data = BLS)   # keeping the intercept, but remember model is only valid of #hits >0
+K <- ncol(X_BLS) 
+X_BLS <- as.matrix(X_BLS)
+X_BLS
+K
+
+# Step 2: Prepare data for JAGS
+JAGS.data <- list(Y    = BLS$DW, 
+                  X    = X_BLS,
+                  N    = nrow(BLS),
+                  K    = K       )
+JAGS.data
+
+# Step 3: Formulate JAGS modelling code
+setwd("M:\\Anders L Kolstad\\R\\R_projects\\soilTemperature")
+sink("BLS.txt")
+cat("
+    model{
+    #1A. Priors betas
+    for (i in 1:K) { beta[i] ~  dunif(0, 200)}   
+    
+    #1B. Priors random effects 
+    # not applicable
+    
+    #1C. Prior for r parameter of Gamma distribution
+    r ~ dunif(0, 10)
+    
+    #2. Likelihood
+    for (i in 1:N) {
+    Y[i]        ~ dgamma(r, mu.eff[i])
+    mu.eff[i]  <- r / mu[i]
+    mu[i] <- eta[i] 
+    eta[i] <- inprod(beta[], X[i,]) }
+    #3. Discrepancy measures: Pearson residuals   
+    for (i in 1:N) {
+    VarY[i] <- mu[i]^2 / r
+    PRes[i] <- (Y[i] - mu[i])  / sqrt(VarY[i])
+    }
+    }
+    ",fill = TRUE)
+sink()
+
+
+
+
+
+
+
+
+# Step 4: Initial values & parameters to save   # R syntax
+inits  <- function () {
+  list(
+    beta  = runif(2, 0, 20),
+    r     = runif(1, 0, 10))  }
+
+
+# Step 5: Specify what to save
+params <- c("beta", #Regression parameters
+            "r",    # gamma parameter
+            "mu" ,
+            "PRes")  
+
+
+# Step 6: Start JAGS
+
+J_BLS <- jags(data       = JAGS.data,
+              inits      = inits,
+              parameters = params,
+              model      = "BLS.txt",
+              n.thin     = 10,
+              n.chains   = 3,
+              n.burnin   = 4000,
+              n.iter     = 5000)
+
+J_BLS  <- update(J_BLS, n.iter = 200000, n.thin = 10)  
+out <- J_BLS$BUGSoutput
+print(out, digits = 3)  
+
+
+# Step 7: Assess mixing and check overdispersion
+# Adjust this variable if extra parameters are added!
+MyNames <- c(colnames(X_BLS), "Gamma variance parameter r")
+MyBUGSChains(out, 
+             c(uNames("beta", K),  "r"),
+             PanelNames = MyNames)
+# Mixing is good
+
+
+
+
+# Step 8: Numerical output
+OUT1    <- MyBUGSOutput(out, 
+                        c(uNames("beta", K), "r"),
+                        VarNames = MyNames)
+print(OUT1, digits = 5)  # based on original covaraites
+MyBUGSHist(out, 
+           c(uNames("beta", K), "r"),
+           PanelNames = MyNames)
+
+# Model validation:
+
+E1 <- out$mean$PRes
+F1 <- out$mean$mu
+
+par(mfrow = c(1, 1))
+plot(x = F1, 
+     y = E1,
+     xlab = "Posterior mean fitted values",
+     ylab = "Posterior mean Pearson residuals")
+abline(h = 0, lty = 2, col = 1)
+# Ok
+
+plot(y = E1, 
+     x = BLS$Hits)
+abline(h = 0, lty = 2)
+# Ok, same as above, because it's identity link
+
+
+
+
+# 1. Get the betas
+beta.mcmc <- out$sims.list$beta  #betas
+dim(beta.mcmc)  #60000 iterations saved 
+# Using these we can puzzle together the pieces.
+
+
+
+#2A. Define a grid of covariate values
+#   without extrapolation
+range(BLS$Hits)
+
+MyData <- data.frame(Hits = seq(from = min(BLS$Hits), 
+                                to = max(BLS$Hits), length = 50))
+head(MyData)
+
+#B. Convert the covariate values into an X matrix
+Xp <- model.matrix(~ Hits, 
+                   data = MyData) 
+
+
+
+#C. Calculate the predicted MCMC values
+# these are insenitive to standardisation of covariats (making the intercept and betas at the wrong scale)
+
+eta.mcmc <- Xp %*% t(beta.mcmc)     # model matrix * est.betas
+mu.mcmc  <- (eta.mcmc)    # removed exp function because there's not log-link
+
+
+# Plot observed vs fitted
+plot(out$mean$mu,BLS$DW)    
+plot(sort(out$mean$mu))  # these are the mean fitted values for each observed value of the covariate
+cor.test(out$mean$mu,BLS$DW)   # not used I don't think
+(r2 <- var(out$mean$mu)/var(BLS$DW))
+resids <- out$mean$mu-BLS$DW
+(r2x <- var(out$mean$mu)/(var(out$mean$mu)+var(resids)))   # 0.82
+
+L <- GetCIs(mu.mcmc)
+L
+
+
+
+MyData2 <- cbind(MyData,L)
+head(MyData2)
+
+
+
+
+p <- ggplot() +
+  geom_point(data = BLS, 
+             aes(x = Hits, 
+                 y = DW))+
+  geom_line(data = MyData2, 
+            aes(x = Hits, 
+                y = mean))+
+  geom_ribbon(data = MyData2,
+              aes(x = Hits, 
+                  ymax = up, 
+                  ymin = lo), 
+              alpha = 0.5)+
+  xlab("Average number of hits per pin") + ylab(expression(paste("Dry weight (g m"^"-2",")")))+
+  theme(legend.position="none") +
+  ggtitle("Broad Leaved Shrubs")+
+  annotate("text", x= 1, y= 300,                   
+           label = paste("R-sq = ", round(r2x, 2), sep = " "),
+           size = 5)+
+  theme_few()+ theme(plot.title = element_text(hjust = 0.5)) + theme(text = element_text(size=15)) 
+p
+
+#compare with lm R2:
+summary(lm(BLS$DW~BLS$Hits))   # R2 = 0.87
+
+
+est <- print(OUT1, digits = 5) 
+est[2]
+pHist <- ggplot(data = as.data.frame(beta.mcmc), aes(x = beta.mcmc[,2]))+
+  geom_histogram(bins = 30)+
+  annotate("segment", x = mean(beta.mcmc[,2]), xend = mean(beta.mcmc[,2]), y = 0, yend = 2200,
+           colour = "blue", size = 3)+
+  annotate("segment", x = quantile(beta.mcmc[,2], probs = 0.025), xend = quantile(beta.mcmc[,2], probs = 0.975), 
+           y = 0, yend = 0,
+           colour = "blue", size = 3)+
+  annotate("text", x=55, y=6000,
+           label = paste("mean = ", round(est[2], 2), sep = " "),
+           size = 5)+
+  xlab("Estimated slope")+
+  xlim(45, 110)+
+  theme_few()+theme(text = element_text(size=15)) 
+pHist
+
+pHist_I <- ggplot(data = as.data.frame(beta.mcmc), aes(x = beta.mcmc[,1]))+
+  geom_histogram(bins = 30)+
+  annotate("segment", x = mean(beta.mcmc[,1]), xend = mean(beta.mcmc[,1]), y = 0, yend = 2200,
+           colour = "blue", size = 3)+
+  annotate("segment", x = quantile(beta.mcmc[,1], probs = 0.025), xend = quantile(beta.mcmc[,1], probs = 0.975), 
+           y = 0, yend = 0,
+           colour = "blue", size = 3)+
+  annotate("text", x=4, y=8500,
+           label = paste("mean = ", round(est[1], 2), sep = " "),
+           size = 5)+
+  xlab("Estimated intercept")+
+  xlim(0, 10)+
+  theme_few()+theme(text = element_text(size=15))
+pHist_I
+
+
+
+library(gridExtra)
+grid.arrange(arrangeGrob(p, ncol = 1, nrow=1), 
+             arrangeGrob(pHist, pHist_I, ncol = 2, nrow = 1))
+
+ggsave(filename = "BLS_model.tiff", height = 10, width = 10,
+       plot = grid.arrange(arrangeGrob(p, ncol = 1, nrow=1), 
+                           arrangeGrob(pHist, pHist_I, ncol = 2, nrow = 1)))
+
+
+
