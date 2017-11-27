@@ -567,8 +567,10 @@ ggsave(filename = "BLG_model.tiff", height = 10, width = 10,
 
 
 
+# -------------------------#
+# NLG ------------------####
+# -------------------------#
 
-# NLG ####
 ##Step 1: Fit the model.
 #Use MCMC to estimate the parameters 
 
@@ -576,8 +578,16 @@ ggsave(filename = "BLG_model.tiff", height = 10, width = 10,
 
 
 setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
-load("NLG.rda")
+load("data/NLG.rda")
 names(NLG)
+
+plot(NLG$Hits, NLG$DW)
+identify(NLG$Hits, NLG$DW)
+NLG[3,]
+#     DW      Hits
+# 3 0.28 0.3265306
+# its from plot 3 and removing it is justifiable based on field/lab notes
+NLG <- NLG[-3,]
 
 #1. Bundle data
 
@@ -660,8 +670,7 @@ out <- J_NLG$BUGSoutput
 print(out, digits = 3)  
 
 
-# Step 7: Assess mixing and check overdispersion
-# Adjust this variable if extra parameters are added!
+# Step 7: Assess mixing 
 MyNames <- c(colnames(X_NLG), "Gamma variance parameter r")
 MyBUGSChains(out, 
              c(uNames("beta", K),  "r"),
@@ -675,7 +684,7 @@ MyBUGSChains(out,
 OUT1    <- MyBUGSOutput(out, 
                         c(uNames("beta", K), "r"),
                         VarNames = MyNames)
-print(OUT1, digits = 5)  # based on original covaraites
+print(OUT1, digits = 5)  
 MyBUGSHist(out, 
            c(uNames("beta", K), "r"),
            PanelNames = MyNames)
@@ -748,7 +757,7 @@ plot(sort(out$mean$mu))  # these are the mean fitted values for each observed va
 cor.test(out$mean$mu,NLG$DW)   # not used I don't think
 (r2 <- var(out$mean$mu)/var(NLG$DW))
 resids <- out$mean$mu-NLG$DW
-(r2x <- var(out$mean$mu)/(var(out$mean$mu)+var(resids)))   # Quite low! 0.61
+(r2x <- var(out$mean$mu)/(var(out$mean$mu)+var(resids)))   # Quite low! 0.63
 
 L <- GetCIs(mu.mcmc)
 L
@@ -783,9 +792,12 @@ p <- ggplot() +
 p
 
 #compare with lm R2:
-summary(lm(NLG$DW~NLG$Hits))   # R2 = 0.90
+summary(lm(NLG$DW~0+NLG$Hits))   # R2 = 0.92 !!
+results <- print(OUT1, digits = 5)  
 
-
+plot(NLG$Hits, NLG$DW)
+abline(lm(NLG$DW~0+NLG$Hits))
+abline(a = results[1], b= results[2])
 
 # Perhaps I can use log-link?
 # LOG-LINK model #####
@@ -891,7 +903,7 @@ abline(a=0, b=1)
 
 resids2 <- out2$mean$mu-NLG$DW
 (r2x2 <- var(out2$mean$mu)/(var(out2$mean$mu)+var(resids2)))   # Good
-r2x # identity-link R2 = 0.61
+r2x # identity-link R2 = 0.63
 r2x2  #log-link R2     = 0.87
 
 # lets plot both
@@ -1009,6 +1021,168 @@ grid.arrange(arrangeGrob(p, ncol = 1, nrow=1),
 ggsave(filename = "NLG_model.tiff", height = 10, width = 10,
        plot = grid.arrange(arrangeGrob(p, ncol = 1, nrow=1), 
                            arrangeGrob(pHist, pHist_I, p2, ncol = 3, nrow = 1)))
+
+
+
+
+
+# What is the R-sq if I remove the three extreme values?
+
+# Truncated model #####
+
+
+plot(sort(NLG$DW))
+NLG2 <- NLG[NLG$DW<30,]
+plot(sort(NLG2$DW))
+rm(NLG)
+#1. Bundle data
+
+X_NLG2 <- model.matrix(~ Hits , data = NLG2)   
+K <- ncol(X_NLG2) 
+X_NLG <- as.matrix(X_NLG2)
+X_NLG
+K
+
+# Step 2: Prepare data for JAGS
+JAGS.data <- list(Y    = NLG2$DW, 
+                  X    = X_NLG2,
+                  N    = nrow(NLG2),
+                  K    = K       )
+JAGS.data
+
+
+setwd("M:\\Anders L Kolstad\\R\\R_projects\\soilTemperature")
+sink("NLG2.txt")
+cat("
+    model{
+    #1A. Priors betas
+    for (i in 1:K) { beta[i] ~  dunif(0, 20)}   
+    
+    #1B. Priors random effects 
+    # not applicable
+    
+    #1C. Prior for r parameter of Gamma distribution
+    r ~ dunif(0, 10)
+    
+    #2. Likelihood
+    for (i in 1:N) {
+    Y[i]        ~ dgamma(r, mu.eff[i])
+    mu.eff[i]  <- r / mu[i]
+    mu[i] <- eta[i]                        
+    eta[i] <- inprod(beta[], X[i,]) }
+    #3. Discrepancy measures: Pearson residuals   
+    for (i in 1:N) {
+    VarY[i] <- mu[i]^2 / r
+    PRes[i] <- (Y[i] - mu[i])  / sqrt(VarY[i])
+    }
+    }
+    ",fill = TRUE)
+sink()
+
+
+
+# Step 4: Initial values & parameters to save   # R syntax
+inits  <- function () {
+  list(
+    beta  = runif(2, 0, 20),
+    r     = runif(1, 0, 10))  }
+
+
+# Step 5: Specify what to save
+params <- c("beta", #Regression parameters
+            "r",    # gamma parameter
+            "mu" ,
+            "PRes") 
+
+J_NLG2 <- jags(data       = JAGS.data,
+                inits      = inits,
+                parameters = params,
+                model      = "NLG2.txt",
+                n.thin     = 10,
+                n.chains   = 3,
+                n.burnin   = 4000,
+                n.iter     = 5000)
+
+J_NLG2  <- update(J_NLG2, n.iter = 200000, n.thin = 10)  
+out3 <- J_NLG2$BUGSoutput
+print(out2, digits = 3)  
+
+MyNames <- c(colnames(X_NLG2), "Gamma variance parameter r")
+
+MyBUGSChains(out3, 
+             c(uNames("beta", K),  "r"),
+             PanelNames = MyNames)
+# Mixing is good
+
+
+# Step 8: Numerical output
+OUT3    <- MyBUGSOutput(out3, 
+                        c(uNames("beta", K), "r"),
+                        VarNames = MyNames)
+print(OUT3, digits = 5)  # slope is less, intercept is higher
+
+
+
+# R-sq
+NLG2$mu <- out3$mean$mu
+NLG2$resid <- NLG2$mu - NLG2$DW
+(r2x3 <- var(NLG2$mu)/(var(NLG2$mu)+var(NLG2$resid)))   # something's strange
+(r2x4 <- var(NLG2$mu)/var(NLG2$DW))   # even less
+cor.test(NLG2$DW, NLG2$mu)
+
+
+
+# 1. Get the betas
+beta.mcmc3 <- out3$sims.list$beta  #betas
+dim(beta.mcmc3)  #60,000 iterations saved     
+
+
+#2A. Define a grid of covariate values
+#   without extrapolation
+range(NLG2$Hits)
+
+MyData3 <- data.frame(Hits = seq(from = min(NLG2$Hits), 
+                                  to = max(NLG2$Hits), length = 50))
+head(MyData3)
+
+#B. Convert the covariate values into an X matrix
+Xp_2 <- model.matrix(~ Hits, 
+                     data = MyData3) 
+
+#C. Calculate the predicted MCMC values
+# these are insenitive to standardisation of covariats (making the intercept and betas at the wrong scale)
+
+eta.mcmc3 <- Xp_2 %*% t(beta.mcmc3)     # model matrix * est.betas
+mu.mcmc3  <- eta.mcmc3      
+
+L3 <- GetCIs(mu.mcmc3)
+
+MyData4 <- cbind(MyData3,L3)
+head(MyData4)
+
+
+
+p3 <- ggplot() +
+  geom_ribbon(data = MyData4,
+              aes(x = Hits, 
+                  ymax = up, 
+                  ymin = lo))+
+  geom_point(data = NLG2, 
+             aes(x = Hits, 
+                 y = DW))+
+  geom_line(data = MyData4, 
+            aes(x = Hits, 
+                y = mean))+
+  xlab("Average number of\nhits per pin") + ylab(expression(paste("Dry weight (g m"^"-2",")")))+
+  theme(legend.position="none") +
+  annotate("text", x= 1.5, y= 15,                   
+           label = paste("R-sq = ", round(r2x3, 2), sep = " "), size = 5)+
+  annotate("text", x= 1.5, y= 20,                   
+           label = "Truncated model", size = 5)+
+  theme_few()+ theme(plot.title = element_text(hjust = 0.5)) + theme(text = element_text(size=15))
+p3
+
+
 
 
 
