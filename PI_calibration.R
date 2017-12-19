@@ -281,7 +281,7 @@ save(SH, file = "SH.rda")
 
 
 setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
-load("BLG.rda")
+load("data/BLG.rda")
 names(BLG)
 head(BLG)
 summary(BLG)
@@ -533,7 +533,7 @@ pHist <- ggplot(data = as.data.frame(beta.mcmc), aes(x = beta.mcmc[,2]))+
            y = 0, yend = 0,
            colour = "blue", size = 3)+
   annotate("text", x=35, y=5000,
-           label = paste("mean = ", round(est[2], 2), sep = " "),
+           label = paste("mean = ", round(est[2], 4), sep = " "),
             size = 5)+
   xlab("Estimated slope")+
   xlim(10, 40)+
@@ -548,7 +548,7 @@ pHist_I <- ggplot(data = as.data.frame(beta.mcmc), aes(x = beta.mcmc[,1]))+
            y = 0, yend = 0,
            colour = "blue", size = 3)+
   annotate("text", x=3, y=7500,
-           label = paste("mean = ", round(est[1], 2), sep = " "),
+           label = paste("mean = ", round(est[1], 4), sep = " "),
            size = 5)+
   xlab("Estimated intercept")+
   xlim(0, 4)+
@@ -561,7 +561,7 @@ library(gridExtra)
 grid.arrange(arrangeGrob(p, ncol = 1, nrow=1), 
              arrangeGrob(pHist, pHist_I, ncol = 2, nrow = 1))
 
-ggsave(filename = "BLG_model.tiff", height = 10, width = 10,
+ggsave(filename = "plots/BLG_model.tiff", height = 10, width = 10,
        plot = grid.arrange(arrangeGrob(p, ncol = 1, nrow=1), 
                            arrangeGrob(pHist, pHist_I, ncol = 2, nrow = 1)))
 
@@ -589,6 +589,8 @@ NLG[3,]
 # 3 0.28 0.3265306
 # its from plot 3 and removing it is justifiable based on field/lab notes
 NLG <- NLG[-3,]
+summary(NLG)
+
 
 #1. Bundle data
 
@@ -1190,9 +1192,10 @@ p3
 # BLS ####
 
 setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
-load("BLS.rda")
+load("data/BLS.rda")
 names(BLS)
 plot(BLS$Hits, BLS$DW)
+summary(BLS)
 #1. Bundle data
 
 X_BLS <- model.matrix(~ Hits , data = BLS)   # keeping the intercept, but remember model is only valid of #hits >0
@@ -1397,7 +1400,7 @@ pHist <- ggplot(data = as.data.frame(beta.mcmc), aes(x = beta.mcmc[,2]))+
            y = 0, yend = 0,
            colour = "blue", size = 3)+
   annotate("text", x=55, y=6000,
-           label = paste("mean = ", round(est[2], 2), sep = " "),
+           label = paste("mean = ", round(est[2], 4), sep = " "),
            size = 5)+
   xlab("Estimated slope")+
   xlim(45, 110)+
@@ -1412,7 +1415,7 @@ pHist_I <- ggplot(data = as.data.frame(beta.mcmc), aes(x = beta.mcmc[,1]))+
            y = 0, yend = 0,
            colour = "blue", size = 3)+
   annotate("text", x=4, y=8500,
-           label = paste("mean = ", round(est[1], 2), sep = " "),
+           label = paste("mean = ", round(est[1], 4), sep = " "),
            size = 5)+
   xlab("Estimated intercept")+
   xlim(0, 10)+
@@ -1425,7 +1428,8 @@ library(gridExtra)
 grid.arrange(arrangeGrob(p, ncol = 1, nrow=1), 
              arrangeGrob(pHist, pHist_I, ncol = 2, nrow = 1))
 
-ggsave(filename = "BLS_model.tiff", height = 10, width = 10,
+setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
+ggsave(filename = "plots/BLS_model.tiff", height = 10, width = 10,
        plot = grid.arrange(arrangeGrob(p, ncol = 1, nrow=1), 
                            arrangeGrob(pHist, pHist_I, ncol = 2, nrow = 1)))
 
@@ -1446,7 +1450,7 @@ NLS[2,]   # it's plot 4 - no mistake
 NLS[10,]  # it's plot 26 - no mistake
 NLS[11,]  # it's plot 32 - no mistake
 # keep all data points
-
+summary(NLS)
 
 # linaer, quadratic and qubic regression
 
@@ -2065,7 +2069,7 @@ names(TH)
 plot(TH$Hits, TH$DW) # nice
 abline(lm(TH$DW~TH$Hits))
 summary(lm(TH$DW~TH$Hits)) # 8+30x
-
+summary(TH)
 
 
 
@@ -2291,7 +2295,7 @@ names(SH)
 plot(SH$Hits, SH$DW) # uneven
 abline(lm(SH$DW~SH$Hits))
 summary(lm(SH$DW~SH$Hits)) # 0 + 18x
-
+summary(SH)
 
 
 

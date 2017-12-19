@@ -20,7 +20,10 @@
 #  3.	How does daily soil temperature fluctuations change throughout the year, and does it differ between treatments?
 
 
-
+#to_install <- (c("readr",  "readxl", "stringr",
+#             "plyr", "dplyr", "ggplot2", "data.table", "plotrix",
+#             "reshape2", "gridExtra", "car", "geoR", "plotly"))
+#install.packages(to_install)
 
 # Packages ####
 library(readr)
@@ -1049,7 +1052,7 @@ write.csv(master2, file = "summer2017_soilTempData.csv", row.names = F)
 
 #  ... to here. ####
 
-
+setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER")
 dat <- read_csv("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER/summer2017_soilTempData.csv")
 dat <- data.frame(dat)
 dat$Date <- as.Date(dat$Date, format = c("%Y.%m.%d"))
@@ -1600,7 +1603,7 @@ plot(df2$distance, df2$temp_distance)
 
 
 
-# Plot as marginal histograms
+# Marginal histograms ####
 
 
 
@@ -1655,3 +1658,204 @@ box_UB <- ggplot(df2, aes(x = distance, y = temp_distance, group = cut_width(dis
 grid.arrange(box_B, box_UB, nrow = 2)
 
 
+
+
+
+
+#*************************************************##
+
+# Field layer biomass ####
+
+#*************************************************##
+
+# get dataset (downloaded from SustHerb server 19.12.2017). Mosses and trees removed.
+# The values are point intercept averagee frequencies after 16 pins in a 50x50 cm frame.
+
+setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER")
+PInt <- read_csv("PI_data.csv")
+
+names(PInt)
+#str(PInt)
+
+
+# many absent species show as characters. Turning these into numeric so that it's easier to exlude them
+# based on colSums:
+to_be_numbers <- c(9:ncol(PInt))
+PInt[,to_be_numbers] <- as.numeric(as.character(unlist(PInt[,to_be_numbers])))
+rowSums(PInt[,9:ncol(PInt)], na.rm = T)
+# some zeros.
+#View(PInt[rowSums(PInt[,9:ncol(PInt)], na.rm = T) == 0,])
+# Bjøllåa B plot 5 and Slindsvann UB plot 7 were not found in 2016 so data exists
+# removing those rows:
+PInt <- PInt[rowSums(PInt[,9:ncol(PInt)], na.rm = T) > 0,]
+
+
+# Balance?
+table(PInt$Treatment, PInt$LocalityName2)
+# good
+
+
+# remove some species
+colSums(PInt[,9:ncol(PInt)], na.rm=T)
+PInt <- PInt[,  c(rep(TRUE, times = 8),    # keep the first 8 columns 
+                       colSums(PInt[,9:ncol(PInt)], na.rm=T) > 0)]     # remove comlumns with no values
+
+colnames(PInt)
+
+BLS_taxa <- c("Vaccinium myrtillus",
+              "Vaccinium vitis-idaea")
+NLS_taxa <- c("Calluna vulgaris",
+              "Empetrum nigrum")
+TH_taxa <- c("Aqonitium lycoctonium",
+             "Athyrium filix-femina",
+             "Blechnum spicant",                  #check
+             "Dryopteris expansa",
+             "Epilobium angustifolium",
+             "Filipendula ulmaria",
+             "Geranium sylvaticum",
+             "Geum rivale",
+             "Phegopteris connectilis",       # check
+             "Ranunculus repens",              # very variable size
+             "Rubus idaeus",
+             "Veronica officinalis")          # small, but quite woody
+SH_taxa <- c("Alchemilla sp_",
+             "Anemone nemorosa",
+             "Chamaepericlymenum suecicum",
+             "Epilobium sp_",
+             "Goodyera repens",
+             "Gymnocarpium dryopteris",
+             "Linnaea borealis",
+             "Maianthemum bifolium",
+             "Melampyrum pratense",
+             "Melampyrum sylvaticum",
+             "Oxalis acetosella",
+             "Potentilla erecta",
+             "Rubus saxatilis",
+             "Taraxacum officinale",
+             "Trientalis europaea",
+             "Viola sp_")
+BLG_taxa <- c("Agrostis capillaris" ,
+              "Anthoxanthum odoratum",
+              "Deschampsia cespitosa",
+              "Festuca sp",
+              "Gras 1",
+              "Luzula pilosa",
+              "Poaceae"              )
+NLG_taxa <- c("Avenella flexuosa")
+                      
+                       
+PI_BM <- PInt   
+# check for zeros. They should be NAs:
+PI_BM[PI_BM == 0] <- NA
+PI_BM[,9:ncol(PI_BM)] <- PI_BM[,9:ncol(PI_BM)]/16 
+
+PI_BM[, BLS_taxa] <- PI_BM[, BLS_taxa]  * 74.4101   + 1.2857
+PI_BM[, NLS_taxa] <- PI_BM[, NLS_taxa]  * 74.184  + 9.2471
+PI_BM[, TH_taxa]  <- PI_BM[, TH_taxa]   * 36.4849 + 4.0373
+PI_BM[, SH_taxa]  <- PI_BM[, SH_taxa]   * 15.1209 + 0.7713
+PI_BM[, BLG_taxa] <- PI_BM[, BLG_taxa]  * 23.3885   + 0.6384
+PI_BM[, NLG_taxa] <- PI_BM[, NLG_taxa]  * 5.9653  + 0.8747
+
+PI_BM$Biomass <- rowSums(PI_BM[,9:ncol(PI_BM)], na.rm=T)
+PI_BM$uniquePlot <- paste0(PI_BM$LocalityName2, PI_BM$Treatment, PI_BM$Plot)
+
+
+
+# SEM DATASET ####
+SEMdat <- read_excel("M:/Anders L Kolstad/systherb data/datasets/Soil temperature.xlsx", 
+                     sheet = "summer2017")
+SEMdat$uniquePlot <- paste0(SEMdat$LocalityName2, SEMdat$TRT, SEMdat$Subplot)
+SEMdat$biomass <- PI_BM$Biomass[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
+SEMdat$vegHeight <- PI_BM$Field_avg_Height_cm[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
+
+setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER")
+write.csv(SEMdat, file = "SEMdat.csv", row.names = F)
+
+
+
+#*************************************************##
+
+# SEM START ####
+
+#*************************************************##
+
+#housekeeping
+str(SEMdat)
+SEMdat$Treatment <- factor(SEMdat$TRT)
+SEMdat$CCI <- as.numeric(SEMdat$avg_CCI)
+SEMdat$Moss_depth <- as.numeric(SEMdat$avg_moss_depth_cm)
+SEMdat$Soil_temp <- as.numeric(SEMdat$avg_temp)
+SEMdat$Soil_temp_range <- as.numeric(SEMdat$avg_daily_temp_range)
+SEMdat$Biomass <- SEMdat$biomass
+SEMdat$Vegetation_height <- SEMdat$vegHeight
+
+
+summary(SEMdat$biomass)
+hist(SEMdat$biomass)
+plot(SEMdat$biomass)
+Boxplot(SEMdat$biomass~ SEMdat$TRT)
+t.test(SEMdat$biomass~ SEMdat$TRT)   # quick look
+
+summary(SEMdat$vegHeight)
+plot(SEMdat$vegHeight)
+hist(SEMdat$vegHeight)
+Boxplot(SEMdat$vegHeight~SEMdat$TRT)
+t.test(SEMdat$vegHeight~SEMdat$TRT)
+
+names(SEMdat)
+MyVars <- c("CCI", "Moss_depth", 
+            "Soil_temp", 
+            "Biomass", "Vegetation_height", "Treatment")
+
+source("M:/Anders L Kolstad/HIGHSTATS/AllRCode/HighstatLibV10.R")  
+
+setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
+
+#tiff("plots/pairPlot.tiff", height = 35, width = 35, units = "cm", res=300)
+#Mypairs(SEMdat[,MyVars])
+#dev.off()
+# Treatment is strongest on CCI, temp, vegetation heigh. 
+# Not present on moss depth or biomass
+# CCI and temp are negatively correlated, quite linear (beta, zero-inlated)
+
+
+
+
+
+# Conseptual model ####
+library(lavaan)
+library(semPlot)
+names(SEMdat)
+conMod <-   'CCI ~ Treatment
+            Moss_depth ~ Treatment
+            Biomass ~ Treatment
+            Vegetation_height ~ Treatment + CCI
+            Soil_temp ~ Vegetation_height+CCI+Biomass+Moss_depth'
+conMod_fit <- sem(conMod, SEMdat)   # dont care about scaling
+
+# QUICK LOOK
+semPaths(conMod_fit)
+
+# FIND THE ORDER OF THE NODES TO ALLOW CUSTUM LAYOUT
+semPaths(conMod_fit,what="std",nodeLabels=letters[1:6],edgeLabels=1:12,edge.label.cex=1.5,fade=FALSE)
+
+ly <- matrix(c(-0.05, 0.05, 
+               -0.2, 0,
+               0.2,0,
+               0.05, -0.05,
+               0,-0.5,
+               0,0.5),ncol=2,byrow=TRUE)
+
+semPaths(conMod_fit, layout = ly)
+
+
+lables <- c("Canopy\nCover","Moss\ndepth","Biomass",
+            "Vegetation\nheigth","Soil\ntemperature","Herbivore\nexclusion")
+
+semPaths(conMod_fit, layout = ly, nodeLabels = labels)
+
+semPaths(conMod_fit, what = "std")
+semPaths(conMod_fit, what = "std", layout = "circle")
+semPaths(conMod_fit, what = "std", layout = "circle")
+
+# BOTTOM OF PAGE ####
