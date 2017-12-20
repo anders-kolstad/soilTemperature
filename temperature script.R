@@ -1769,7 +1769,7 @@ SEMdat$biomass <- PI_BM$Biomass[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
 SEMdat$vegHeight <- PI_BM$Field_avg_Height_cm[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
 
 setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER")
-write.csv(SEMdat, file = "SEMdat.csv", row.names = F)
+#write.csv(SEMdat, file = "SEMdat.csv", row.names = F)
 
 
 
@@ -1778,6 +1778,7 @@ write.csv(SEMdat, file = "SEMdat.csv", row.names = F)
 # SEM START ####
 
 #*************************************************##
+SEMdat <- read.csv("SEMdat.csv")
 
 #housekeeping
 str(SEMdat)
@@ -1809,8 +1810,10 @@ MyVars <- c("CCI", "Moss_depth",
 
 source("M:/Anders L Kolstad/HIGHSTATS/AllRCode/HighstatLibV10.R")  
 
-setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
 
+Mypairs(SEMdat[,MyVars])
+
+setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
 #tiff("plots/pairPlot.tiff", height = 35, width = 35, units = "cm", res=300)
 #Mypairs(SEMdat[,MyVars])
 #dev.off()
@@ -1830,7 +1833,7 @@ conMod <-   'CCI ~ Treatment
             Moss_depth ~ Treatment
             Biomass ~ Treatment
             Vegetation_height ~ Treatment + CCI
-            Soil_temp ~ Vegetation_height+CCI+Biomass+Moss_depth'
+            Soil_temp ~ Vegetation_height+CCI+Biomass+Moss_depth+Treatment'
 conMod_fit <- sem(conMod, SEMdat)   # dont care about scaling
 
 # QUICK LOOK
@@ -1839,23 +1842,30 @@ semPaths(conMod_fit)
 # FIND THE ORDER OF THE NODES TO ALLOW CUSTUM LAYOUT
 semPaths(conMod_fit,what="std",nodeLabels=letters[1:6],edgeLabels=1:12,edge.label.cex=1.5,fade=FALSE)
 
-ly <- matrix(c(-0.05, 0.05, 
-               -0.2, 0,
-               0.2,0,
-               0.05, -0.05,
-               0,-0.5,
-               0,0.5),ncol=2,byrow=TRUE)
+ly <- matrix(c(-0.2, 0.05,    # CCI
+               -0.5 , 0,       # Moss
+                0.5,  0,       # Biomass
+                0.08,-0.05,    # Veg heigth
+                0.35,   -0.5,     # temperature
+                0.05,    0.5      # treatment
+               ),ncol=2,byrow=TRUE)
 
-semPaths(conMod_fit, layout = ly)
+semPaths(conMod_fit, layout = ly)                       # new layout
+semPaths(conMod_fit, layout = ly, residuals = FALSE)    # don't draw errors
 
+# add custom labels
 
-lables <- c("Canopy\nCover","Moss\ndepth","Biomass",
+labels <- c("Canopy\nCover","Moss\ndepth","Biomass",
             "Vegetation\nheigth","Soil\ntemperature","Herbivore\nexclusion")
+semPaths(conMod_fit, layout = ly, residuals = FALSE, nodeLabels = labels)
 
-semPaths(conMod_fit, layout = ly, nodeLabels = labels)
+semPaths(conMod_fit, layout = ly, residuals = F, nodeLabels = labels,
+         sizeMan = 10,            # size of manifest nodes
+         edge.color =  "black",   # edge (arrow) colour
+         edge.width = 3,          # thicker edges
+         label.cex = 0.7, label.scale = FALSE)   #equal text size
 
-semPaths(conMod_fit, what = "std")
-semPaths(conMod_fit, what = "std", layout = "circle")
-semPaths(conMod_fit, what = "std", layout = "circle")
+
+
 
 # BOTTOM OF PAGE ####
