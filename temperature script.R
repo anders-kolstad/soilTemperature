@@ -1832,40 +1832,214 @@ names(SEMdat)
 conMod <-   'CCI ~ Treatment
             Moss_depth ~ Treatment
             Biomass ~ Treatment
-            Vegetation_height ~ Treatment + CCI
-            Soil_temp ~ Vegetation_height+CCI+Biomass+Moss_depth+Treatment'
+            Vegetation_height ~ Treatment 
+            Soil_temp ~ Vegetation_height+CCI+Biomass+Moss_depth'
 conMod_fit <- sem(conMod, SEMdat)   # dont care about scaling
 
 # QUICK LOOK
-semPaths(conMod_fit)
+#semPaths(conMod_fit)
 
 # FIND THE ORDER OF THE NODES TO ALLOW CUSTUM LAYOUT
-semPaths(conMod_fit,what="std",nodeLabels=letters[1:6],edgeLabels=1:12,edge.label.cex=1.5,fade=FALSE)
+#semPaths(conMod_fit,what="std",nodeLabels=letters[1:6],edgeLabels=1:12,edge.label.cex=1.5,fade=FALSE)
 
-ly <- matrix(c(-0.2, 0.05,    # CCI
-               -0.5 , 0,       # Moss
-                0.5,  0,       # Biomass
-                0.08,-0.05,    # Veg heigth
-                0.35,   -0.5,     # temperature
-                0.05,    0.5      # treatment
+ly <- matrix(c(-1,  0,    # CCI
+               -0.4 , 0,       # Moss
+                1,  0,       # Biomass
+                0.4,  0,    # Veg heigth
+                0,   -0.5,     # temperature
+                0,    0.5      # treatment
                ),ncol=2,byrow=TRUE)
 
-semPaths(conMod_fit, layout = ly)                       # new layout
-semPaths(conMod_fit, layout = ly, residuals = FALSE)    # don't draw errors
+#semPaths(conMod_fit, layout = ly)                       # new layout
+#semPaths(conMod_fit, layout = ly, residuals = FALSE, what = "std")    # don't draw errors
 
 # add custom labels
 
 labels <- c("Canopy\nCover","Moss\ndepth","Biomass",
             "Vegetation\nheigth","Soil\ntemperature","Herbivore\nexclusion")
-semPaths(conMod_fit, layout = ly, residuals = FALSE, nodeLabels = labels)
+#semPaths(conMod_fit, layout = ly, residuals = FALSE, nodeLabels = labels)
 
+setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER")
+#tiff("conceptualSEM.tiff", units = "cm", res = 300, height = 20, width = 20)
 semPaths(conMod_fit, layout = ly, residuals = F, nodeLabels = labels,
-         sizeMan = 10,            # size of manifest nodes
+         sizeMan = 15,            # size of manifest nodes
          edge.color =  "black",   # edge (arrow) colour
          edge.width = 3,          # thicker edges
-         label.cex = 0.7, label.scale = FALSE)   #equal text size
+         label.cex = 0.7, label.scale = FALSE, border.width = 3)   #equal text size
+#dev.off()
+ 
+
+# piecewiseSEM
+library(piecewiseSEM)
+library(glmmTMB)
+
+# remove rows woth NAs,
+MyVars <- c("Treatment", "Moss_depth", "CCI", "vegHeight", "Biomass", "Soil_temp", "LocalityName3")
+SEMdat2 <- SEMdat[,MyVars]
+SEMdat2 <- na.omit(SEMdat2)
+
+
+# Individual model validation
+# MOSS
+Moss_depth = lme(Moss_depth ~ Treatment, random = ~ 1 | LocalityName3, data = SEMdat2)
+plot(Moss_depth)
+qqnorm(resid(Moss_depth))
+qqline(resid(Moss_depth))
+summary(Moss_depth)
+
+
+# TEMP
+Soil_temp = lme(Soil_temp ~ Moss_depth + CCI + vegHeight + Biomass + Treatment, 
+                random = ~ 1 | LocalityName3, data = SEMdat2)
+
+plot(Soil_temp)
+resSoil <- resid(Soil_temp)
+qqnorm(resSoil)
+plot(SEMdat2$Treatment, resSoil)
+plot(SEMdat2$Moss_depth, resSoil)
+plot(SEMdat2$vegHeight, resSoil)
+plot(SEMdat2$Biomass, resSoil)
+plot(SEMdat2$CCI, resSoil)       # lots of values with low CCI, but still looks good
+
+# CCI
+CCI = lme(CCI ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat2)
+plot(CCI)
+resCCI <- resid(CCI)
+qqnorm(resCCI)
+plot(SEMdat2$Treatment, resCCI)
+# good
+
+
+# vegetation
+vegHeight = lme(vegHeight ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat2)
+plot(vegHeight)   # funnel? no negative fitted values
+# summary(vegHeight) # confirmes no negative fitted
+resVeg <- resid(vegHeight)
+qqnorm(resVeg)
+qqline(resVeg)  # not too good
+plot(SEMdat2$Treatment, resVeg) # not too bad
+
+
+plot(SEMdat2$Treatment, SEMdat2$vegHeight) # good
+plot(SEMdat2$Biomass, SEMdat2$vegHeight)
+plot(SEMdat2$Treatment, SEMdat2$Biomass)
+library(lme4)
+vegHeight = glmer(vegHeight ~ Treatment + ( 1 | LocalityName3), family = Gamma(link = "identity"), data = SEMdat2)
+summary(vegHeight) # looks good after re-running validation plots above
+
+# biomass
+Biomass = lme(Biomass ~ Treatment + vegHeight, random = ~ 1 | LocalityName3, data = SEMdat2)
+plot(Biomass) # funnel?
+resBio <- resid(Biomass)
+qqnorm(resBio)
+qqline(resBio)
+plot(SEMdat2$Treatment, resBio)
+plot(SEMdat2$vegHeight, resBio)
+summary(Biomass) # no negative values. Small correlation between Int and slope
 
 
 
+temp_pSEM_randomList = list(
+  
+  # Predicting soil temperature
+  Soil_temp = lme(Soil_temp ~ Moss_depth + CCI + vegHeight + Biomass +Treatment, 
+                  random = ~ 1 | LocalityName3, data = SEMdat2),
+  
+  # Predicting Moss depth
+  Moss_depth = lme(Moss_depth ~ Treatment, random = ~ 1 | LocalityName3, data = SEMdat2),
+  
+  # Predicting Canopy Cover
+  #CCI = glmmTMB(CCI ~ Treatment + (1 | LocalityName3), family = "betar", data = SEMdat2),
+  CCI = lme(CCI ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat2),
+  
+  # Predict vegetation heitgh
+  vegHeight = glmer(vegHeight ~ Treatment +Moss_depth + ( 1 | LocalityName3), family = Gamma(link = "identity"), data = SEMdat2),
+  
+  
+  # Predict field layer biomass
+  Biomass = lme(Biomass ~ Treatment +vegHeight , random = ~ 1 | LocalityName3, data = SEMdat2)
+  
+)
+(pSEMfit <- sem.fit(temp_pSEM_randomList, SEMdat2, conditional = F))
+# AIC 59.68, 
+(coef.table <- sem.coefs(temp_pSEM_randomList, SEMdat2, standardize = "none"))
+#(coef.table.std <- sem.coefs(temp_pSEM_randomList, SEMdat2, standardize = "scale")) # dont work with gamma distribution
+
+
+
+sem.plot(coef.table = coef.table, corr.errors = NULL,
+         show.nonsig = TRUE, scaling = 10, alpha = 0.05)
+
+
+# FIGURE ####
+Mod <-   'CCI ~ Treatment
+          Moss_depth ~ Treatment
+          Biomass ~ Treatment+Vegetation_height
+          Vegetation_height ~ Treatment + Moss_depth
+          Soil_temp ~ Vegetation_height+CCI+Biomass+Moss_depth+Treatment'
+
+
+Mod_fit <- sem(Mod, SEMdat)   # dont care about scaling
+summary(Mod_fit)
+# FIND THE ORDER OF THE NODES TO ALLOW CUSTUM LAYOUT
+semPaths(Mod_fit,what="std",nodeLabels=letters[1:6],edgeLabels=1:11,edge.label.cex=1.5,fade=FALSE, residuals = F)
+semPaths(Mod_fit)
+
+# node order   # CCI, Moss, Biomass, Veg heigth, temperature treatment
+# edge order  
+# 1) TRT-CCI
+# 2)  - MOSS
+# 3)  -BIOMASS
+# 4)  vegetation - biomass
+# 5)  TRT - veg
+# 6) moss - veg
+# 7) veg - temp
+# 8) CCI - temp
+# 9) Biomass - temp
+# 10) Moss - temp
+# 11) TRT - temp
+
+colour <- c("green",  # 1) 
+            "grey",   # 2)  
+            "grey",   # 3)  
+            "green",  # 4)  
+            "green",  # 5)  
+            "red",    # 6) 
+            "grey",  # 7) 
+            "red",    # 8) 
+            "grey",   # 9) 
+            "grey",   # 10) 
+            "red")    
+
+edge_widths <-  
+  c(7,   # 1) 
+    1,   # 2)  
+    1,   # 3)  
+    7,   # 4)  
+    7,   # 5)  
+    4,   # 6) 
+    1,   # 7) 
+    7,   # 8) 
+    1,   # 9) 
+    1,   # 10) 
+    4)    
+
+
+
+write.csv(coef.table, "pSEMoutput.csv", row.names = F)
+tiff("pSEM.tiff", units = "cm", res = 300, height = 20, width = 20)
+semPaths(Mod_fit, layout = ly, residuals = F, nodeLabels = labels,
+         sizeMan = 15,            # size of manifest nodes
+         edge.color =  colour,    # edge (arrow) colour
+         edge.width = edge_widths,          # thicker edges
+         label.cex = 0.7, label.scale = FALSE,  #equal text size
+         esize = 2,
+         border.width = 3)   
+dev.off()
+
+
+
+
+#),ncol=2,byrow=TRUE)
 
 # BOTTOM OF PAGE ####
