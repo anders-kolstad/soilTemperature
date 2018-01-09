@@ -39,6 +39,13 @@ library(gridExtra)
 library(car)
 library(geoR) #variog
 library(plotly) 
+library(lavaan)
+library(semPlot)
+library(piecewiseSEM)
+library(glmmTMB)
+library(nlme)
+library(lme4)
+
 # !!!  Jump from here.... !!! ####
 
 
@@ -370,7 +377,7 @@ p <- p + ylab(expression(atop("Soil temperature",( degree~C))))
 p <- p + theme(text = element_text(size=15))
 p <- p + scale_colour_discrete(name="",
                                  breaks=c("B", "UB"),
-                                 labels=c("Browsed", "Exclosure"))
+                                 labels=c("Open plots", "Exclosure"))
 p <- p + theme(plot.margin=unit(c(0.1,1.5,0.1,1),"cm"))
 p <- p + theme(axis.title =  element_text(hjust = 0.5))  #default
 p
@@ -383,7 +390,7 @@ p
 head(t2)
 t2$logger <- paste(t2$site, t2$trt, t2$subplot, t2$prod_class, sep="_")
 length(unique(t2$logger))
-summary(t2)
+#summary(t2)
 
 # get each logger in a seperate column
 t4_lag <- dcast(t2, Date~logger, value.var = "Mean_daily_temperature.mn")
@@ -435,7 +442,7 @@ colnames(rel_shift)<- c("Date", "logger", "soil_temp","one_day", "five_days",
 
 
 # look at it
-summary(rel_shift)
+#summary(rel_shift)
 Boxplot(rel_shift$one_day)
 Boxplot(rel_shift$five_days)
 
@@ -494,12 +501,12 @@ rel_shift4 <- aggregate(data = rel_shift,
   #geom_area()+
   geom_smooth(method = 'loess', span = 0.2)+
   xlab("Date") +
-  ylab(expression("Change in soil temperature since yesterday  " ( degree~C)))+
+  ylab(expression(atop("Change in soil temperature", "since yesterday  " ( degree~C))))+
   theme(text = element_text(size=15))+
   scale_colour_discrete(
     name="",
     breaks=c("B", "UB"),
-    labels=c("Browsed", "Exclosure"))+
+    labels=c("Open plots", "Exclosure"))+
   theme(plot.margin=unit(c(0.1,1.5,0.1,1),"cm"))+
   theme(axis.title =  element_text(hjust = 0.5)))
 
@@ -700,7 +707,7 @@ p3.2 <- p3.2 + ylab(expression(atop("  Daily soil\ntemperature", "fluctuations "
 p3.2 <- p3.2 + theme(text = element_text(size=15)) 
 p3.2 <- p3.2 + scale_colour_discrete(name="",
                                  breaks=c("B", "UB"),
-                                 labels=c("Browsed", "Exclosure"))
+                                 labels=c("Open plots", "Exclosure"))
 p3.2 <- p3.2 + theme(plot.margin=unit(c(0.1,1.5,0.1,1),"cm"))
 #p3.2 <- p3.2 + theme(legend.position="bottom")
 p3.2
@@ -756,10 +763,11 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 
 ## END MULTIPLOT function ####
 
-setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
+setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER\\figures")
 #pdf("Full year series6.pdf")
-multiplot(p, p2.3, p3.2, cols = 1)
-#dev.off()
+tiff("full_year_multiplot.tiff", height = 30, width = 20, units = "cm", res = 300)
+multiplot(p, p2.3,p_lag3,  p3.2, cols = 1)
+dev.off()
 
 
 
@@ -816,7 +824,10 @@ head(master5)
 
 # Truncate
 winter <- as.Date(c("2017-01-01", "2017-03-31"), format = c("%Y-%m-%d"))
+summer <- as.Date(c("2016-06-01", "2016-08-31"), format = c("%Y-%m-%d"))
+
 master6 <- master5[master5$Date %between% winter,]
+master7 <- master5[master5$Date %between% summer,]
 head(master6)
 
 
@@ -929,13 +940,13 @@ p4 <- p4 + geom_point(shape = 1)
 p4 <- p4 + geom_smooth(method=lm)
 
 p4 <- p4 + xlab("") 
-p4 <- p4 + ylab(expression(atop("Difference from plot mean", "soil temperature " ( degree~C))))
+p4 <- p4 + ylab(expression(atop("Difference from plot mean", "winter soil temperature " ( degree~C))))
 p4 <- p4 + theme(text = element_text(size=15)) 
 
 p4 <- p4 + theme(plot.margin=unit(c(0.1,1.5,0.1,1),"cm"))
 #p4 <- p4 + ggtitle(expression(atop("Mean soil temperature","(jan-mar)")))
 p4 <- p4 + annotate("text", x=-2, y=0.6, 
-                    label= "Beta = 0.035\nR2 = 0.04\nP = 0.03")
+                    label= "slope = 0.035\nR-sq = 0.04\np-value = 0.03")
 
 p4.2 <-  ggplot(data = winter2, 
               aes(x = diff_in_moss, y = diff_in_range))
@@ -943,15 +954,16 @@ p4.2 <-  ggplot(data = winter2,
 p4.2 <- p4.2 + geom_point(shape = 1)
 
 p4.2 <- p4.2 + xlab("Difference from plot mean\nmoss depth (cm)") 
-p4.2 <- p4.2 + ylab(expression(atop("Difference from plot mean", "soil temperature fluctuations")))
+p4.2 <- p4.2 + ylab(expression(atop("Difference from plot mean", "winter soil temperature fluctuations")))
 p4.2 <- p4.2 + theme(text = element_text(size=15)) 
 
 p4.2 <- p4.2 + theme(plot.margin=unit(c(0.1,1.5,0.1,1),"cm"))
 #p4.2 <- p4.2 + ggtitle(expression(atop("Mean soil temperature","fluctuations (jan-mar)")))
 
 
-setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
-pdf("Moss_winter_effect6.pdf",width=8,height=16)
+setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER\\figures")
+#pdf("Moss_winter_effect6.pdf",width=8,height=16)
+tiff("Moss_winter_effect.tiff", height = 30, width = 15, units = "cm", res = 300)
 multiplot(p4, p4.2, cols = 1)
 dev.off()
 
@@ -970,17 +982,35 @@ mean_winter <- aggregate(data = master6,
 mean_winter <- do.call(data.frame, mean_winter)
 head(mean_winter)
 
-p5 <- ggplot(data = mean_winter, aes(x=trt, y=Mean_winter_temperature.mn))
-p5 <- p5 + geom_boxplot()
-p5 <- p5 + xlab("Treatment") 
-p5 <- p5 + ylab(expression(atop("Mean winter soil", "temperature " ( degree~C))))
-p5 <- p5 + theme(text = element_text(size=15)) 
+mean_summer <- aggregate(data = master7, 
+                         cbind(Mean_summer_temperature = Temp) ~ 
+                           trt + TID + prod_class,
+                         FUN = function(x) c(mn = mean(x), max = max(x), min = min(x) )  )
 
-p5
+mean_summer <- do.call(data.frame, mean_summer)
+head(mean_summer)
+
+(pwinter <- ggplot(data = mean_winter, aes(x=trt, y=Mean_winter_temperature.mn))+
+geom_boxplot()+
+xlab("Treatment") +
+ylab(expression(atop("Mean winter soil", "temperature " ( degree~C))))+
+theme(text = element_text(size=15))+
+    theme_classic()+
+    scale_x_discrete(labels=c("B" = "Open plots", "UB" = "Exclosed")))
+
+(psummer <- ggplot(data = mean_summer, aes(x=trt, y=Mean_summer_temperature.mn))+
+    geom_boxplot()+
+    xlab("Treatment") +
+    ylab(expression(atop("Mean summer soil", "temperature " ( degree~C))))+
+    theme(text = element_text(size=15))+
+    theme_classic()+
+    scale_x_discrete(labels=c("B" = "Open plots", "UB" = "Exclosed"))
+    )
+
 
 setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
-#pdf("mean_winter_temperature.pdf",width=6,height=6)
-p5
+tiff("mean_winter_and_summer_temperature.tiff",width=20,height=12, units = "cm", res = 300)
+grid.arrange(pwinter, psummer, ncol = 2)
 dev.off()
 
 
@@ -1191,16 +1221,18 @@ p_daily <- ggplot(data = dat4, aes(x=Time, y=Temp,
                                    group = f_TRT,
                                    colour = f_TRT))+
   geom_line(size = 2)+
-  ylab(expression("Mean soil temperature " ( degree~C)))+
+  ylab("")+
   scale_x_datetime(date_breaks = "6 hour",
                  date_labels = "%H:%M")+
   scale_colour_discrete(name="",
                         breaks=c("B", "UB"),
-                        labels=c("Browsed", "Exclosure"))
+                        labels=c("Open plots", "Exclosure"))+
+  theme(text = element_text(size=15))
 p_daily
 
-setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
-#pdf("Daily Summer Soil Temp Fluctuations.pdf")  
+setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER\\figures")
+#pdf("Daily Summer Soil Temp Fluctuations.pdf") 
+#tiff("Daily Summer Soil Temp Fluctuations.tiff", height = 15, width = 15, units = "cm", res = 300)
 p_daily
 #dev.off()
 # no point having error ribbons because there's a temporal trend with 
@@ -1212,7 +1244,7 @@ p_daily
 
 
 # Getting avg moss depth :
-# jump from here ... ####
+# JUMP from here ... ####
 dat4.2 <- aggregate(data = dat2,
                   Temp~
                     Date+
@@ -1281,7 +1313,7 @@ p_mean <- ggplot(data= dat5.2, aes(x=TRT, y= avg_temp, group = TID))+
   theme(text = element_text(size=15)) +
   annotate("text", x=2.1, y=c(11.7, 11.2, 11, 10,9.8), 
            label= c("12", "8", "1", "6", "14"))+
-  scale_x_discrete(labels=c("B" = "Browsed", "UB" = "Exclosure"))
+  scale_x_discrete(labels=c("B" = "Open plots", "UB" = "Exclosure"))
 p_mean
 
 
@@ -1316,17 +1348,19 @@ p_line <- ggplot(data= dat6.3, aes(x=Date, y= Temp.mn, group = TRT, colour = TRT
   xlab("Date") +
   ylab(expression(atop("Mean daily soil", "temperature " ( degree~C))))+
   theme(text = element_text(size=15)) +
-  scale_colour_discrete(name="",
-                        breaks=c("B", "UB"),
-                        labels=c("Browsed", "Exclosure"))
+  theme(legend.position="none")
   
 p_line
 
 
 
-setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
+setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER\\figures")
 #pdf("Mean soil temp summer2017_5.pdf")
-multiplot(p_line, p_mean, cols = 1)
+#multiplot(p_mean, p_line, p_daily, cols = 2)
+tiff("Mean soil temp summer2017.tiff", height = 20, width = 24, units = "cm", res=300)
+grid.arrange(p_line, p_mean, p_daily, 
+             ncol =2, nrow=2,
+             layout_matrix = rbind(c(1,1), c(2,3)))
 dev.off()
 
 
@@ -1448,7 +1482,7 @@ p_CCI_temp <- ggplot(data = temp3,
   ylab(expression(atop("Difference from plot mean", "soil temperature " ( degree~C))))+
   theme(text = element_text(size=15)) +
   annotate("text", x=-30, y=-1.2, 
-           label= "Beta = -0.013\nR2 = 0.29\nP < 0.001")
+           label= "slope = -0.013\nR-sq = 0.29\np-value < 0.001")
 
 p_CCI_temp
 summary(lm(dat5$temp_diff~dat5$CCI_diff))
@@ -1467,8 +1501,9 @@ summary(lm(dat5$temp_diff~dat5$moss_diff))
 
 setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
 #pdf("CCI and moss effect on soil temperature_2.pdf",width=5,height=10)
+tiff("CCI and moss effect on soil temperature.tiff", height = 20, width = 20, units = "cm", res=300)
 multiplot(p_CCI_temp, p_moss_temp, cols = 1)
-#dev.off()
+dev.off()
 
 
 # plot the same agains temp fluctuations
@@ -1662,9 +1697,9 @@ grid.arrange(box_B, box_UB, nrow = 2)
 
 
 
-#*************************************************##
+#*************************************************####
 
-# Field layer biomass ####
+# Creating SEM dataset ####
 
 #*************************************************##
 
@@ -1747,71 +1782,327 @@ NLG_taxa <- c("Avenella flexuosa")
 PI_BM <- PInt   
 # check for zeros. They should be NAs:
 PI_BM[PI_BM == 0] <- NA
-PI_BM[,9:ncol(PI_BM)] <- PI_BM[,9:ncol(PI_BM)]/16 
+PI_BM[,9:ncol(PI_BM)] <- PI_BM[,9:ncol(PI_BM)]/16   # standardising the intercept frequency
 
+# calculating total intercept frequency
+PI_BM$tFREQ <- rowSums(PI_BM[,9:ncol(PI_BM)], na.rm=T)
+  
+# calculating total biomass
 PI_BM[, BLS_taxa] <- PI_BM[, BLS_taxa]  * 74.4101   + 1.2857
 PI_BM[, NLS_taxa] <- PI_BM[, NLS_taxa]  * 74.184  + 9.2471
 PI_BM[, TH_taxa]  <- PI_BM[, TH_taxa]   * 36.4849 + 4.0373
 PI_BM[, SH_taxa]  <- PI_BM[, SH_taxa]   * 15.1209 + 0.7713
 PI_BM[, BLG_taxa] <- PI_BM[, BLG_taxa]  * 23.3885   + 0.6384
 PI_BM[, NLG_taxa] <- PI_BM[, NLG_taxa]  * 5.9653  + 0.8747
+PI_BM$tBiomass <- rowSums(PI_BM[,9:ncol(PI_BM)], na.rm=T)
 
-PI_BM$Biomass <- rowSums(PI_BM[,9:ncol(PI_BM)], na.rm=T)
+# calculating biomass for some groups that I aim to include in the SEM
+PI_BM$shrubBiomass <- rowSums(PI_BM[,c(BLS_taxa, NLS_taxa)], na.rm=T)
+PI_BM$thBiomass <- rowSums(PI_BM[,TH_taxa], na.rm=T)
+PI_BM$shBiomass <- rowSums(PI_BM[,SH_taxa], na.rm=T)
+PI_BM$graminoidBiomass <- rowSums(PI_BM[,c(NLG_taxa, BLG_taxa)], na.rm=T)
+
+
 PI_BM$uniquePlot <- paste0(PI_BM$LocalityName2, PI_BM$Treatment, PI_BM$Plot)
 
+SEMvars <- c("tFREQ", "tBiomass", "shrubBiomass", "thBiomass", "shBiomass", "graminoidBiomass")
+source("M:/Anders L Kolstad/HIGHSTATS/AllRCode/HighstatLibV10.R")
+Mypairs(PI_BM[, SEMvars])
+# tFREQ is correlated to grasses (and small herbs) 
+# and Biomass is corelated to shrubs (and tall herbs).
+# tFREQ and Biomass are only weakly correlated.
+# To best describe field layer canopy cover i propose
+# a compound index using tFREQ and Biomass:
+PI_BM$tFREQ_scaled <- scale(PI_BM$tFREQ)
+PI_BM$tBiomass_scaled <- scale(PI_BM$tBiomass)
+PI_BM$UnderstoryCoverIndex <- scale(PI_BM$tFREQ_scaled+PI_BM$tBiomass_scaled)
+
+SEMvars2 <- c("UnderstoryCoverIndex", "tBiomass", "tFREQ", "shrubBiomass", "thBiomass", "shBiomass", "graminoidBiomass")
+Mypairs(PI_BM[, SEMvars2])
+# equal correlation between tFREQ and tBiomass!
 
 
-# SEM DATASET ####
+
+# calculating Simpson's index:
+library(vegan)
+names(PI_BM)
+PI_BM[is.na(PI_BM)] <- 0
+PI_BM$Simpsons_vasc <- diversity(PI_BM[,9:48], index = "simpson")
+summary(PI_BM$Simpsons_vasc) # no one's, that good
+# plots with index of 0 are plots with only 1 species
+# Obs, this Simpsons index here dont include mosses (which can only have one hit per pin)
+
+
+
+
+
+
+
+
+# ++++++++++++++++++++++++++++++++++++++ ##
+
+# **get SPECIES RICHNESS: ####
+# This dataset includes 15 sites, year 2016 only, 
+# species recorded by point intercept,
+# and total species per plot (observed)
+
+# ++++++++++++++++++++++++++++++++++++++ ##
+
+
+SR_dat <- read.csv("speciesRichness_data.csv")
+
+# removing all but the five sites with temperature data:
+#table(SR_dat$LocalityName)
+#unique(PI_BM$LocalityName)
+MySites <- unique(PI_BM$LocalityName)
+SR_dat2 <- filter(SR_dat, LocalityName %in% MySites)
+SR_dat2$LocalityName <- factor(SR_dat2$LocalityName)
+table(SR_dat2$LocalityName)
+
+
+# remove some species that have no observations
+table(colSums(SR_dat2[,7:ncol(SR_dat2)], na.rm=T))  # 41 species
+SR_dat2 <- SR_dat2[,  c(rep(TRUE, times = 6),    # keep the first 6 columns 
+                  colSums(SR_dat2[,7:ncol(SR_dat2)], na.rm=T) > 0)]     # remove comlumns with no values
+
+
+# turn species columns into numbers
+to_be_numbers <- c(7:ncol(SR_dat2))
+SR_dat2[,to_be_numbers] <- as.numeric(as.character(unlist(SR_dat2[,to_be_numbers])))
+table(rowSums(SR_dat2[,7:ncol(SR_dat2)], na.rm = T)) # two empty rows
+#View(SR_dat2[rowSums(SR_dat2[,7:ncol(SR_dat2)], na.rm = T) == 0,])
+# Slindsvann UB 7 and 2VBB 5 was not found in 2016 so thats ok
+# removing these rows
+SR_dat2 <- SR_dat2[rowSums(SR_dat2[,7:ncol(SR_dat2)], na.rm = T) > 0,]
+
+# make site names comparable to SEMdat dataset
+SR_dat2$LocalityName2[SR_dat2$LocalityName ==  "namdalseid_1kub"] <- "Kalddalsbekken" 
+SR_dat2$LocalityName2[SR_dat2$LocalityName ==  "verdal_2VB"] <-       "Bjoellaaa"
+SR_dat2$LocalityName2[SR_dat2$LocalityName ==  "Selbu_Sl"] <-          "Slindsvann"
+SR_dat2$LocalityName2[SR_dat2$LocalityName ==  "Sl_Tydal"] <-       "Seterdalsveien"
+SR_dat2$LocalityName2[SR_dat2$LocalityName ==  "Bratsberg"] <-       "Bratsberg"
+
+
+# remove some columns that are not vascular plant species
+SR_dat2 <- select(SR_dat2,
+               -Bare_ground, 
+               -Bare_ground_branch, 
+               #-Bare_ground_stone,
+               -Bryophyta,
+               -Cow_shit,
+               -Lichens,
+               -Litter,
+               #-No_occurrence,
+               -Sphagnum_sp)
+               #-Stone)
+
+
+
+# summing species per row (ncluding trees:
+names(SR_dat2) # end with Viola_sp_
+SR_dat2$total_SpeciesRichness <- rowSums(SR_dat2[,7:88] > 0, na.rm=T)
+
+# getting seprate SR for mooses and vascular plants:
+names(SR_dat2)
+mosses <- c("Cirriphyllum_piliferum",
+                "Dicranum_sp",
+               "Hylocomiastrum_umbratum",
+               "Hylocomium_splendens",
+               "Marchantiophyta",
+               "Plagiochila_asplenioides",
+               "Plagiomnium_ellipticum",
+               "Plagiomnium_undulatum",
+               "Plagiothecium_laetum_curvifolium",
+               "Plagiothecium_undulatum",
+               "Pleurozium_schreberi",
+               "Polytrichum_astrum",
+               "Ptilidium_ciliare",
+               "Ptilium_crista_castrensis",
+               "Rhodobryum_roseum",
+               "Rhytidiadelphus_loreus",
+               "Rhytidiadelphus_squarrosus_subpinnatus",
+               "Rhytidiadelphus_triquetrus",
+               "Sciuro_hypnum_reflexum",
+               "Sciuro_hypnum_starkei")
+
+SR_dat2$moss_SpeciesRichness <- rowSums(SR_dat2[,mosses] > 0, na.rm=T)
+SR_dat2$vasc_SpeciesRichness <- SR_dat2$total_SpeciesRichness-SR_dat2$moss_SpeciesRichness
+SR_dat2[is.na(SR_dat2)] <- 0  # NA need to be zero for 'diversity' to work
+SR_dat2$Simpsons_moss <- diversity(SR_dat2[,mosses], index = "simpson")
+plot(SR_dat2$Simpsons_moss, SR_dat2$moss_SpeciesRichness)
+# by artifact, if there are no moss species, the simpsons index = 1, which is wrong.
+SR_dat2$Simpsons_moss[SR_dat2$Simpsons_moss == 1] <- 0
+summary(SR_dat2$Simpsons_moss)
+
+View(SR_dat2[SR_dat2$LocalityCode == "1KB" & SR_dat2$Plot == 2,])
+# apparantly point intercept of vascular plants and mosses appear on seperate lines.
+
+
+SR_dat2$uniquePlot <- as.factor(paste0(SR_dat2$LocalityName2, SR_dat2$Treatment, SR_dat2$Plot))
+names(SR_dat2)
+
+SR_dat3 <- dcast(SR_dat2, uniquePlot~Method, 
+                 value.var = "total_SpeciesRichness", 
+                 fun.aggregate = sum)
+SR_dat4 <- dcast(SR_dat2, uniquePlot~Method, 
+                 value.var = "moss_SpeciesRichness", 
+                 fun.aggregate = sum)
+SR_dat5 <- dcast(SR_dat2, uniquePlot~Method, 
+                 value.var = "vasc_SpeciesRichness", 
+                 fun.aggregate = sum)
+SR_dat6 <- dcast(SR_dat2, uniquePlot~Method, 
+                 value.var = "Simpsons_moss", 
+                 fun.aggregate = sum)
+
+SR_dat3$total_SR <- SR_dat3$Observed+SR_dat3$Point_Intercept
+SR_dat3$moss_SR <- SR_dat4$Observed+SR_dat4$Point_Intercept
+SR_dat3$vasc_SR <- SR_dat5$Observed+SR_dat5$Point_Intercept
+SR_dat3$Simpsons_moss <- SR_dat6$Observed+SR_dat6$Point_Intercept
+
+
+# SEM DATASET ##
 SEMdat <- read_excel("M:/Anders L Kolstad/systherb data/datasets/Soil temperature.xlsx", 
                      sheet = "summer2017")
 SEMdat$uniquePlot <- paste0(SEMdat$LocalityName2, SEMdat$TRT, SEMdat$Subplot)
-SEMdat$biomass <- PI_BM$Biomass[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
-SEMdat$vegHeight <- PI_BM$Field_avg_Height_cm[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
+SEMdat$UCI <- PI_BM$UnderstoryCoverIndex[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
+SEMdat$simpsons_vasc <- PI_BM$Simpsons_vasc[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
+SEMdat$simpsons_moss <- SR_dat3$Simpsons_moss[match(SEMdat$uniquePlot, SR_dat3$uniquePlot)]
+
+SEMdat$total_SR <- SR_dat3$total_SR[match(SEMdat$uniquePlot, SR_dat3$uniquePlot)]
+SEMdat$moss_SR <- SR_dat3$moss_SR[match(SEMdat$uniquePlot, SR_dat3$uniquePlot)]
+SEMdat$vasc_SR <- SR_dat3$vasc_SR[match(SEMdat$uniquePlot, SR_dat3$uniquePlot)]
+SEMdat$shrubBM <- PI_BM$shrubBiomass[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
+SEMdat$thBM <- PI_BM$thBiomass[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
+SEMdat$shBM <- PI_BM$shBiomass[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
+SEMdat$gramBM <- PI_BM$graminoidBiomass[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
+SEMdat$avenellaBM <- PI_BM$`Avenella flexuosa`[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
 
 setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER")
-#write.csv(SEMdat, file = "SEMdat.csv", row.names = F)
+write.csv(SEMdat, file = "SEMdat.csv", row.names = F)
 
 
 
-#*************************************************##
+#*************************************************####
 
 # SEM START ####
 
 #*************************************************##
+setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER")
 SEMdat <- read.csv("SEMdat.csv")
 
 #housekeeping
-str(SEMdat)
+#str(SEMdat)
 SEMdat$Treatment <- factor(SEMdat$TRT)
+levels(SEMdat$Treatment) <- c("Open plots", "Exclosed")
 SEMdat$CCI <- as.numeric(SEMdat$avg_CCI)
 SEMdat$Moss_depth <- as.numeric(SEMdat$avg_moss_depth_cm)
 SEMdat$Soil_temp <- as.numeric(SEMdat$avg_temp)
 SEMdat$Soil_temp_range <- as.numeric(SEMdat$avg_daily_temp_range)
-SEMdat$Biomass <- SEMdat$biomass
-SEMdat$Vegetation_height <- SEMdat$vegHeight
+#SEMdat$Biomass <- SEMdat$biomass
+#SEMdat$Vegetation_height <- SEMdat$vegHeight
 
 
-summary(SEMdat$biomass)
-hist(SEMdat$biomass)
-plot(SEMdat$biomass)
-Boxplot(SEMdat$biomass~ SEMdat$TRT)
-t.test(SEMdat$biomass~ SEMdat$TRT)   # quick look
+# Exploration
+summary(SEMdat$UCI)
+hist(SEMdat$UCI)
+plot(SEMdat$UCI)
+Boxplot(SEMdat$UCI~ SEMdat$TRT)  
 
-summary(SEMdat$vegHeight)
-plot(SEMdat$vegHeight)
-hist(SEMdat$vegHeight)
-Boxplot(SEMdat$vegHeight~SEMdat$TRT)
-t.test(SEMdat$vegHeight~SEMdat$TRT)
+summary(SEMdat$simpsons_vasc)
+plot(SEMdat$simpsons_vasc)
+hist(SEMdat$simpsons_vasc)
+Boxplot(SEMdat$simpsons_vasc~SEMdat$TRT)
+t.test(SEMdat$simpsons_vasc~SEMdat$TRT)  # Open plots less diverse in vascular plants
 
+summary(SEMdat$simpsons_moss)
+plot(SEMdat$simpsons_moss)
+hist(SEMdat$simpsons_moss)
+Boxplot(SEMdat$simpsons_moss~SEMdat$TRT)
+t.test(SEMdat$simpsons_moss~SEMdat$TRT)  
+
+summary(SEMdat$total_SR)
+plot(SEMdat$total_SR)
+hist(SEMdat$total_SR)
+Boxplot(SEMdat$total_SR~SEMdat$TRT)
+t.test(SEMdat$total_SR~SEMdat$TRT)
+
+summary(SEMdat$moss_SR)
+plot(SEMdat$moss_SR)
+hist(SEMdat$moss_SR)
+Boxplot(SEMdat$moss_SR~SEMdat$TRT)
+t.test(SEMdat$moss_SR~SEMdat$TRT)
+
+summary(SEMdat$vasc_SR)
+plot(SEMdat$vasc_SR)
+hist(SEMdat$vasc_SR)
+Boxplot(SEMdat$vasc_SR~SEMdat$TRT)
+t.test(SEMdat$vasc_SR~SEMdat$TRT)
+
+summary(SEMdat$shrubBM)
+plot(SEMdat$shrubBM)
+hist(SEMdat$shrubBM)
+Boxplot(SEMdat$shrubBM~SEMdat$TRT)
+
+
+summary(SEMdat$thBM)
+plot(SEMdat$thBM)
+hist(SEMdat$thBM)
+Boxplot(SEMdat$thBM~SEMdat$TRT)
+# big difference
+
+summary(SEMdat$shBM)
+plot(SEMdat$shBM)
+hist(SEMdat$shBM)
+Boxplot(SEMdat$shBM~SEMdat$TRT)
+
+summary(SEMdat$gramBM)
+plot(SEMdat$gramBM)
+hist(SEMdat$gramBM)
+Boxplot(SEMdat$gramBM~SEMdat$Treatment)
+# more grasses in the Open plots
+
+summary(SEMdat$avenellaBM)
+plot(SEMdat$avenellaBM)  # most plots have it
+hist(SEMdat$avenellaBM)
+Boxplot(SEMdat$avenellaBM~SEMdat$Treatment)
+
+
+# PAIRS ####
+source("M:/Anders L Kolstad/HIGHSTATS/AllRCode/HighstatLibV10.R")  
 names(SEMdat)
 MyVars <- c("CCI", "Moss_depth", 
             "Soil_temp", 
-            "Biomass", "Vegetation_height", "Treatment")
-
-source("M:/Anders L Kolstad/HIGHSTATS/AllRCode/HighstatLibV10.R")  
-
-
+            "UCI", "Treatment")
 Mypairs(SEMdat[,MyVars])
+
+MyVars2 <- c("simpsons_vasc", "simpsons_moss", 
+             "total_SR", "moss_SR", "vasc_SR")
+Mypairs(SEMdat[,MyVars2])
+
+MyVars3 <- c("moss_SR", "vasc_SR", "total_SR",
+             "gramBM", "avenellaBM", "shrubBM", "thBM", "shBM")
+Mypairs(SEMdat[,MyVars3])
+
+MyVars4 <- c("simpsons_moss", "simpsons_vasc",
+             "gramBM", "avenellaBM", "shrubBM", "thBM", "shBM")
+Mypairs(SEMdat[,MyVars4])
+# moss diversity is not explained. 
+# vasc diversity differs between richness and simpsons, 
+# but is negatively correlated with shrubs and positivly correlated with short herbs. 
+# Not affected by grasses as hypothesised (but looks non-linear). Neither all grasses or Avenella alone.
+# All grasses and Avenella work differently (different signs)
+
+
+MyVars5 <- c("CCI", "Moss_depth", "Soil_temp", "UCI",
+               "gramBM", "avenellaBM", "shrubBM", "thBM", "shBM")
+Mypairs(SEMdat[,MyVars5])
+# Avenella like warm soil and no moss (non-linear).
+# Problem about correation between UCI and vegetation biomass
+
+MyVars6 <- c("CCI", "Moss_depth", "Soil_temp", "UCI",
+             "simpsons_vasc", "simpsons_moss", "total_SR", "moss_SR", "vasc_SR")
+Mypairs(SEMdat[,MyVars6])
+# nothing
 
 setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
 #tiff("plots/pairPlot.tiff", height = 35, width = 35, units = "cm", res=300)
@@ -1842,13 +2133,22 @@ conMod_fit <- sem(conMod, SEMdat)   # dont care about scaling
 # FIND THE ORDER OF THE NODES TO ALLOW CUSTUM LAYOUT
 #semPaths(conMod_fit,what="std",nodeLabels=letters[1:6],edgeLabels=1:12,edge.label.cex=1.5,fade=FALSE)
 
-ly <- matrix(c(-1,  0,    # CCI
+vert <- matrix(c(-1,  0,    # CCI
                -0.4 , 0,       # Moss
                 1,  0,       # Biomass
                 0.4,  0,    # Veg heigth
                 0,   -0.5,     # temperature
                 0,    0.5      # treatment
                ),ncol=2,byrow=TRUE)
+
+hor <- matrix(c(0,  1,    # CCI
+               0 , 0.35,       # Moss
+               0,  -1,       # Biomass
+               0,  -0.35,    # Veg heigth
+               1,   0,     # temperature
+               -1,    0      # treatment
+),ncol=2,byrow=TRUE)
+
 
 #semPaths(conMod_fit, layout = ly)                       # new layout
 #semPaths(conMod_fit, layout = ly, residuals = FALSE, what = "std")    # don't draw errors
@@ -1859,19 +2159,20 @@ labels <- c("Canopy\nCover","Moss\ndepth","Biomass",
             "Vegetation\nheigth","Soil\ntemperature","Herbivore\nexclusion")
 #semPaths(conMod_fit, layout = ly, residuals = FALSE, nodeLabels = labels)
 
-setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER")
-#tiff("conceptualSEM.tiff", units = "cm", res = 300, height = 20, width = 20)
-semPaths(conMod_fit, layout = ly, residuals = F, nodeLabels = labels,
-         sizeMan = 15,            # size of manifest nodes
+setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER/figures")
+#tiff("conseptualSEM.tiff", units = "cm", res = 300, height = 30, width = 30)
+semPaths(conMod_fit, layout = hor, residuals = F, nodeLabels = labels,
+         sizeMan = 21,  sizeMan2 = 12,          # width/heigth of manifest nodes
          edge.color =  "black",   # edge (arrow) colour
          edge.width = 3,          # thicker edges
-         label.cex = 0.7, label.scale = FALSE, border.width = 3)   #equal text size
+         label.cex = c(rep(2.5,6)), label.scale = FALSE, border.width = 3  #equal text size
+         )   
 #dev.off()
- 
 
 # piecewiseSEM
 library(piecewiseSEM)
 library(glmmTMB)
+library(nlme)
 
 # remove rows woth NAs,
 MyVars <- c("Treatment", "Moss_depth", "CCI", "vegHeight", "Biomass", "Soil_temp", "LocalityName3")
@@ -1879,16 +2180,79 @@ SEMdat2 <- SEMdat[,MyVars]
 SEMdat2 <- na.omit(SEMdat2)
 
 
-# Individual model validation
-# MOSS
-Moss_depth = lme(Moss_depth ~ Treatment, random = ~ 1 | LocalityName3, data = SEMdat2)
+# Individual model validation ####
+# **MOSS####
+
+#setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER/figures")
+#tiff(filename = "moss_trt.tiff", 
+#     height = 10, width = 10, units = "cm", res = 300)
+(Moss_TRT_gg <- ggplot(data = SEMdat2,
+                      aes(x = Treatment,
+                          y = Moss_depth))+
+  geom_boxplot()+
+    theme_classic()+
+    xlab("Treatment") +
+    ylab("Moss depth (cm)")
+)
+#dev.off()
+
+
+Moss_depth <- lme(Moss_depth ~ Treatment, random = ~ 1 | LocalityName3, data = SEMdat2)
 plot(Moss_depth)
 qqnorm(resid(Moss_depth))
 qqline(resid(Moss_depth))
 summary(Moss_depth)
 
 
-# TEMP
+# **TEMP####
+(Temp__CCI_gg <- ggplot(data = SEMdat2,
+                       aes(x = CCI,
+                           y = Soil_temp))+
+    geom_point()+
+        theme_classic()+
+    xlab("Canopy Cover Index") +
+    ylab(expression(atop("Soil temperature",( degree~C))))+
+   geom_abline(intercept = 11.857381003, slope = -0.014856518)
+)   # linear, negative
+
+(Temp__moss_gg <- ggplot(data = SEMdat2,
+                        aes(x = Moss_depth,
+                            y = Soil_temp))+
+    geom_point()+
+    theme_classic()+
+    xlab("Moss depth (cm)") +
+    ylab(expression(atop("Soil temperature",( degree~C))))
+)   # linear, weak
+
+(Temp__veg_gg <- ggplot(data = SEMdat2,
+                         aes(x = vegHeight,
+                             y = Soil_temp))+
+    geom_point()+
+    theme_classic()+
+    xlab("Vegetation heigth (cm)") +
+    ylab(expression(atop("Soil temperature",( degree~C))))
+)   # linear, weak
+
+(Temp__biom_gg <- ggplot(data = SEMdat2,
+                        aes(x = Biomass,
+                            y = Soil_temp))+
+    geom_point()+
+    theme_classic()+
+    xlab(expression(paste("Field layer biomass (g m"^"2", ")")))+
+    ylab(expression(atop("Soil temperature",( degree~C))))
+)   # linear, weak
+
+(Temp__trt_gg <- ggplot(data = SEMdat2,
+                         aes(x = Treatment,
+                             y = Soil_temp))+
+    geom_boxplot()+
+    theme_classic()+
+    xlab("Treatment") +
+    ylab(expression(atop("Soil temperature",( degree~C))))
+)   # Treatment effect, direct or indirect. Plot residuals
+
+
+
 Soil_temp = lme(Soil_temp ~ Moss_depth + CCI + vegHeight + Biomass + Treatment, 
                 random = ~ 1 | LocalityName3, data = SEMdat2)
 
@@ -1901,33 +2265,144 @@ plot(SEMdat2$vegHeight, resSoil)
 plot(SEMdat2$Biomass, resSoil)
 plot(SEMdat2$CCI, resSoil)       # lots of values with low CCI, but still looks good
 
-# CCI
-CCI = lme(CCI ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat2)
+# **CCI####
+(CCI__trt_gg <- ggplot(data = SEMdat2,
+                        aes(x = Treatment,
+                            y = CCI))+
+   geom_boxplot()+
+   theme_classic()+
+   xlab("Treatment") +
+   ylab("Canopy cover (%)")
+)   # Strong treatment effect
+
+CCI <- lme(CCI ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat2)
 plot(CCI)
 resCCI <- resid(CCI)
 qqnorm(resCCI)
 plot(SEMdat2$Treatment, resCCI)
 # good
 
+library(glmmTMB)
+SEMdat2$CCI_prop <- SEMdat2$CCI/100
+SEMdat2$CCI_prop1 <- ( SEMdat2$CCI_prop * (nrow(SEMdat2) - 1) + 0.5 ) / nrow(SEMdat2)  
+#  see highstats EX726A or: Beta regression in R. Cibrari-Neto & Zeileis. 
+#  Journal of Statistical Software. April 2010, Volume 34, Issue 2.
+summary(SEMdat2$CCI_prop)
+summary(SEMdat2$CCI_prop1) # 0 < y <1
+tapply(SEMdat2$CCI_prop1, SEMdat2$Treatment, FUN = mean)
+tapply(SEMdat2$CCI, SEMdat2$Treatment, FUN = mean)
 
-# vegetation
+CCI_beta = glmmTMB(CCI_prop1 ~ Treatment + (1 | LocalityName3), data = SEMdat2, 
+                   family= list(family = "beta", link = "logit"))
+summary(CCI_beta)
+summary(CCI)
+
+# Model validation
+E1 <- resid(CCI_beta)
+F1 <- fitted(CCI_beta)
+phi  <- summary(CCI_beta)$sigma
+
+VarY <- F1 *  (1 - F1) / (1 + phi)  
+E1p  <- (SEMdat2$CCI_prop1 - F1) / sqrt(VarY) # Pearson residuals
+
+
+# Plot Pearson residuals vs fitted values
+par(mfrow = c(1,1), cex.lab = 1.5, mar = c(5,5,2,2))
+plot(x = F1, 
+     y = E1p,
+     xlab = "Fitted values",
+     ylab = "Pearson residuals")
+abline(h = 0, lty = 2)
+
+
+
+# Plot Pearson residuals vs each covariate
+p <- ggplot()+
+     geom_boxplot(data = SEMdat2, 
+                      aes(y = E1p, x = Treatment))+
+     xlab("Treatment") + ylab("Pearson residuals")
+
+# OK
+
+
+
+# **vegetation####
+(veg__trt_gg <- ggplot(data = SEMdat2,
+                       aes(x = Treatment,
+                           y = vegHeight))+
+   geom_boxplot()+
+   theme_classic()+
+   xlab("Treatment") +
+   ylab("Height of field layer vegetation (cm)")
+)   # Treatment effect
+
+(veg__moss_gg <- ggplot(data = SEMdat2,
+                       aes(x = Moss_depth,
+                           y = vegHeight))+
+    geom_point()+
+    theme_classic()+
+    xlab("Moss depth (cm)") +
+    ylab("Height of field layer vegetation (cm)")+
+    geom_abline(intercept = 21.231533837, slope = -0.656314721)
+)   # Negative. Looks linear
+
+
 vegHeight = lme(vegHeight ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat2)
 plot(vegHeight)   # funnel? no negative fitted values
+
+
 # summary(vegHeight) # confirmes no negative fitted
 resVeg <- resid(vegHeight)
 qqnorm(resVeg)
 qqline(resVeg)  # not too good
 plot(SEMdat2$Treatment, resVeg) # not too bad
 
+vegHeight2 <-  lme(vegHeight ~ Treatment + Moss_depth , random = ~ 1 | LocalityName3, data = SEMdat2)
+plot(vegHeight2)   # funnel!
+summary(SEMdat2$vegHeight) # no zeros
+vegHeight2.2 <-  lme(log(vegHeight) ~ Treatment + Moss_depth , random = ~ 1 | LocalityName3, data = SEMdat2)
+plot(vegHeight2.2)   # problem fixed
+
+vegHeight3 <- glmer(vegHeight ~ Treatment + Moss_depth + ( 1 | LocalityName3), family = Gamma(link = "identity"), data = SEMdat2)
+plot(vegHeight3)   # decent
+resVeg <- resid(vegHeight3)
+qqnorm(resVeg)
+qqline(resVeg)  # good
+plot(SEMdat2$Treatment, resVeg) # not too bad
+vegHeight4 <- glmer(vegHeight ~ Treatment + Moss_depth + I(Moss_depth^2) + ( 1 | LocalityName3), family = Gamma(link = "identity"), data = SEMdat2)
+summary(vegHeight4)  # only the linear relationship makes sense
+summary(vegHeight3)
 
 plot(SEMdat2$Treatment, SEMdat2$vegHeight) # good
 plot(SEMdat2$Biomass, SEMdat2$vegHeight)
 plot(SEMdat2$Treatment, SEMdat2$Biomass)
 library(lme4)
-vegHeight = glmer(vegHeight ~ Treatment + ( 1 | LocalityName3), family = Gamma(link = "identity"), data = SEMdat2)
-summary(vegHeight) # looks good after re-running validation plots above
+#vegHeight5 = glmer(vegHeight ~ Treatment + ( 1 | LocalityName3), family = Gamma(link = "identity"), data = SEMdat2)
+#summary(vegHeight5) # looks good after re-running validation plots 
 
-# biomass
+# **biomass####
+(biom__trt_gg <- ggplot(data = SEMdat2,
+                        aes(x = Treatment,
+                            y = Biomass))+
+   geom_boxplot()+
+   theme_classic()+
+   xlab("Treatment") +
+   ylab(expression(paste("Biomass (g m"^"2", ")")))
+)   # No treatment effect
+
+(biom__vegHeight_gg <- ggplot(data = SEMdat2,
+                        aes(x = vegHeight,
+                            y = Biomass))+
+    geom_point()+
+    theme_classic()+
+    xlab("Height of field layer (cm)") +
+    ylab(expression(paste("Biomass (g m"^"2", ")")))+
+    geom_abline(intercept = 74.016590910, slope = 1.829152352)
+)   # Positive. Looks linear
+
+
+
+
 Biomass = lme(Biomass ~ Treatment + vegHeight, random = ~ 1 | LocalityName3, data = SEMdat2)
 plot(Biomass) # funnel?
 resBio <- resid(Biomass)
@@ -1938,32 +2413,143 @@ plot(SEMdat2$vegHeight, resBio)
 summary(Biomass) # no negative values. Small correlation between Int and slope
 
 
+# All plots ####
+setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER/figures")
 
+tiff("all_arcs.tiff", units = "cm", res = 300, height = 40, width = 25)
+all_arcs <- grid.arrange(CCI__trt_gg,
+             Moss_TRT_gg,
+             veg__trt_gg,
+             veg__moss_gg,
+             biom__trt_gg,
+             biom__vegHeight_gg,
+             Temp__CCI_gg,
+             Temp__moss_gg,
+             Temp__veg_gg,
+             Temp__biom_gg,
+             Temp__trt_gg,
+             nrow = 6)
+
+dev.off()
+# Model list ####
 temp_pSEM_randomList = list(
   
-  # Predicting soil temperature
+  # Predicting soil temperature (mediated model)
+  # Soil_temp = lme(Soil_temp ~ Moss_depth + CCI + vegHeight + Biomass, 
+  #                random = ~ 1 | LocalityName3, data = SEMdat2),
+  # Adding treatment as explanatory node after running pSEMfit:
   Soil_temp = lme(Soil_temp ~ Moss_depth + CCI + vegHeight + Biomass +Treatment, 
+                 random = ~ 1 | LocalityName3, data = SEMdat2),
+  
+  # Predicting Moss depth
+  Moss_depth = lme(Moss_depth ~ Treatment, random = ~ 1 | LocalityName3, data = SEMdat2),
+  
+  # Predicting Canopy Cover
+  CCI = lme(CCI ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat2),
+  
+  # Predict vegetation heitgh
+  # vegHeight = glmer(vegHeight ~ Treatment + ( 1 | LocalityName3), family = Gamma(link = "identity"), data = SEMdat2),
+  # Added moss depth as explanatory node
+  vegHeight = glmer(vegHeight ~ Treatment +Moss_depth + ( 1 | LocalityName3), family = Gamma(link = "identity"), data = SEMdat2),
+  
+  
+  # Predict field layer biomass:
+  # Biomass = lme(Biomass ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat2)
+  # Added vegetation hieght as explanatory node:
+  Biomass = lme(Biomass ~ Treatment +vegHeight , random = ~ 1 | LocalityName3, data = SEMdat2)
+)
+
+(pSEMfit <- sem.fit(temp_pSEM_randomList, SEMdat2, conditional = F))
+# AIC 56
+(coef.table <- sem.coefs(temp_pSEM_randomList, SEMdat2, standardize = "none", intercept = F))
+#write.csv(coef.table, "coef.table.csv", row.names = F)
+mod_fit <- sem.model.fits(temp_pSEM_randomList)
+write.csv(mod_fit, "mod_fit.csv", row.names = T)
+
+# Compare with beta model for CCI: ####
+# Here I'm confirming that using beta regressin for CCI doesn't change anything. 
+# Jump from here ... ####
+
+# Model list #2 ##
+temp_pSEM_randomList_2 = list(
+  
+  # Predicting soil temperature (mediated model)
+  Soil_temp = lme(Soil_temp ~ Moss_depth + CCI_prop1 + vegHeight + Biomass +Treatment, 
                   random = ~ 1 | LocalityName3, data = SEMdat2),
   
   # Predicting Moss depth
   Moss_depth = lme(Moss_depth ~ Treatment, random = ~ 1 | LocalityName3, data = SEMdat2),
   
   # Predicting Canopy Cover
-  #CCI = glmmTMB(CCI ~ Treatment + (1 | LocalityName3), family = "betar", data = SEMdat2),
-  CCI = lme(CCI ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat2),
+  CCI_beta = glmmTMB(CCI_prop1 ~ Treatment + (1 | LocalityName3), data = SEMdat2, 
+                     family= list(family = "beta", link = "logit")),  
   
   # Predict vegetation heitgh
   vegHeight = glmer(vegHeight ~ Treatment +Moss_depth + ( 1 | LocalityName3), family = Gamma(link = "identity"), data = SEMdat2),
   
   
-  # Predict field layer biomass
+  # Predict field layer biomass:
   Biomass = lme(Biomass ~ Treatment +vegHeight , random = ~ 1 | LocalityName3, data = SEMdat2)
-  
 )
-(pSEMfit <- sem.fit(temp_pSEM_randomList, SEMdat2, conditional = F))
-# AIC 59.68, 
-(coef.table <- sem.coefs(temp_pSEM_randomList, SEMdat2, standardize = "none"))
-#(coef.table.std <- sem.coefs(temp_pSEM_randomList, SEMdat2, standardize = "scale")) # dont work with gamma distribution
+
+
+(pSEMfit_2 <- sem.fit(temp_pSEM_randomList_2, SEMdat2, conditional = F))
+# AIC 55 (slightly better)
+(coef.table_2 <- sem.coefs(temp_pSEM_randomList_2, SEMdat2, standardize = "none"))
+#(coef.table.std <- sem.coefs(temp_pSEM_randomList, SEMdat2, standardize = "scale"))
+# The results are almost identidal, so I'm skipping the beta regression to keep all variables in raw scale
+
+## To here ####
+
+
+
+# Compare without the gamma model, using log tansformation insted : #
+# If the results are comparable I prefer the lme models as they allow the sem-model-fit calcuations.
+# Jump from here ... ####
+SEMdat2$l_vegHeight <- log(SEMdat2$vegHeight)
+
+# Model list #3 ##
+temp_pSEM_randomList_3 = list(
+  
+  # Predicting soil temperature (mediated model)
+  Soil_temp = lme(Soil_temp ~ Moss_depth + CCI + l_vegHeight + Biomass +Treatment, 
+                  random = ~ 1 | LocalityName3, data = SEMdat2),
+  
+  # Predicting Moss depth
+  Moss_depth = lme(Moss_depth ~ Treatment, random = ~ 1 | LocalityName3, data = SEMdat2),
+  
+  # Predicting Canopy Cover
+  CCI = lme(CCI ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat2),
+  
+  # Predict vegetation heitgh
+  vegHeight = lme(l_vegHeight ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat2),
+  
+  
+  # Predict field layer biomass:
+  Biomass = lme(Biomass ~ Treatment +l_vegHeight , random = ~ 1 | LocalityName3, data = SEMdat2)
+)
+
+
+(pSEMfit_3 <- sem.fit(temp_pSEM_randomList_3, SEMdat2, conditional = F))
+# AIC 55 (slightly better)
+(coef.table_3 <- sem.coefs(temp_pSEM_randomList_3, SEMdat2, standardize = "none"))
+coef.table
+# The results are not identidal.
+sem.model.fits(temp_pSEM_randomList_3)
+# I can perhaps use this R2 with a caveat: vegHeight  Marginal R2: 0.0775025378   Conditional R2:  0.4134856
+
+## To here ####
+
+
+# This is one option for plotting relationships, but dont work with gamma or with categorical nodes
+partial.resid(Soil_temp ~ CCI, 
+              temp_pSEM_randomList, SEMdat2,
+              list(lmeControl(opt = "optim")), return.data.frame = F)
+
+partial.resid( Biomass ~ vegHeight, 
+               temp_pSEM_randomList, SEMdat2,
+               list(lmeControl(opt = "optim")), return.data.frame = F)
+
 
 
 
@@ -2012,34 +2598,109 @@ colour <- c("green",  # 1)
             "red")    
 
 edge_widths <-  
-  c(7,   # 1) 
+  c(5,   # 1) 
     1,   # 2)  
     1,   # 3)  
-    7,   # 4)  
-    7,   # 5)  
-    4,   # 6) 
+    5,   # 4)  
+    5,   # 5)  
+    5,   # 6) 
     1,   # 7) 
-    7,   # 8) 
+    5,   # 8) 
     1,   # 9) 
     1,   # 10) 
-    4)    
+    5)    
 
+mod_fit
+labels <- c(expression(atop("Canopy Cover (%)", paste("R"^"2","=0.25"))),
+            expression(atop("Moss depth (cm)", paste("R"^"2","=0.16"))),
+            expression(atop("Biomass (g m"^"-2"*")", paste("R"^"2","=0.46"))),
+            "Vegetation\nheigth (cm)",
+            expression(atop("Soil temperature " ( degree~C), paste("R"^"2","=0.65"))),
+            "Herbivore\nexclusion")
 
+edge_labels <- c("19.3***",  # 1) TRT-CCI
+                 "",         # 2)  - MOSS
+                 "",         # 3)  -BIOMASS
+                 "1.8***",   # 4)  vegetation - biomass
+                 "7.8***",   # 5)  TRT - veg
+                 "-0.7*",    # 6) moss - veg
+                 "",         # 7) veg - temp
+                 "-0.015***",# 8) CCI - temp
+                 "",         # 9) Biomass - temp
+                 "",         # 10) Moss - temp
+                 "-0.23*")   # 11) TRT - temp
 
-write.csv(coef.table, "pSEMoutput.csv", row.names = F)
-tiff("pSEM.tiff", units = "cm", res = 300, height = 20, width = 20)
-semPaths(Mod_fit, layout = ly, residuals = F, nodeLabels = labels,
-         sizeMan = 15,            # size of manifest nodes
+#write.csv(coef.table, "pSEMoutput.csv", row.names = F)
+setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER/figures")
+
+tiff("pSEM.tiff", units = "cm", res = 300, height = 30, width = 30)
+semPaths(Mod_fit, layout = hor, residuals = F, nodeLabels = labels,
+         sizeMan = 21, sizeMan2 = 7,            # width/height of manifest nodes
          edge.color =  colour,    # edge (arrow) colour
          edge.width = edge_widths,          # thicker edges
-         label.cex = 0.7, label.scale = FALSE,  #equal text size
-         esize = 2,
-         border.width = 3)   
+         label.cex = c(rep(1.5,6)), label.scale = F,  #equal text size
+         esize = 1, asize = 2,edgeLabels = edge_labels, edge.label.cex = 1.2,
+         edge.label.bg = "white", edge.label.position = 0.3, 
+         edge.label.color = "black",         border.width = 3)   
 dev.off()
-
+rep(2,6)
 
 
 
 #),ncol=2,byrow=TRUE)
 
-# BOTTOM OF PAGE ####
+# EXTENDED SEM ####
+names(SEMdat)
+SEMdat$SpeciesRichness <- rnorm(nrow(SEMdat), 1,2)
+SEMdat$Grasses <- rnorm(nrow(SEMdat))
+SEMdat$Herbs <- rnorm(nrow(SEMdat))
+SEMdat$LargeFerns <- rnorm(nrow(SEMdat))
+SEMdat$DwarfShrubs <- rnorm(nrow(SEMdat))
+
+conMod2 <-  'CCI ~ Treatment
+            Moss_depth ~ Treatment
+            Biomass ~ Treatment
+            Vegetation_height ~ Treatment 
+            Soil_temp ~ Treatment
+            SpeciesRichness ~ Grasses+Herbs+LargeFerns+DwarfShrubs
+            Grasses ~ CCI+Moss_depth+Soil_temp
+            Herbs ~ CCI+Moss_depth+Soil_temp
+            LargeFerns ~ CCI+Moss_depth+Soil_temp
+            DwarfShrubs ~ CCI+Moss_depth+Soil_temp'
+conMod_fit2 <- sem(conMod2, SEMdat)   # dont care about scaling
+
+semPaths(conMod_fit2,layout =hor2, what="std",nodeLabels=letters[1:11],edgeLabels=1:22,edge.label.cex=1.5,fade=FALSE)
+semPaths(conMod_fit2)
+hor2 <- matrix(c(-0.4,  -0.3,          # CCI
+                 -0.4 , 0.3,       # Moss
+                 -1,  1,         # Biomass
+                 -0.7,  0.65,      # Veg heigth
+                 -0.4,   -0.9,         # temperature
+                1,   0,        # SR
+                0.5, 1,        #Grasses
+                0.5,  0.3 ,        # Herbs
+                0.5,  -0.3,       #Large ferns
+                0.5,   -1,       #Dwarf shrubs
+                -1,-1             # Treatment
+),ncol=2,byrow=TRUE)
+
+labels3 <- c("Canopy\nCover",
+             "Moss\ndepth",
+             "Biomass",
+            "Vegetation\nheigth",
+            "Soil\ntemperature",
+            "Species\nrichness",
+            "Grasses",
+            "Herbs",
+            "Large ferns",
+            "Dwarf shrubs", 
+            "Herbivore\nexclusion")
+
+svg("conMod2.svg")
+semPaths(conMod_fit2, layout = hor2, residuals = F, nodeLabels = labels3,
+         sizeMan = 12,  sizeMan2 = 7,          # width/heigth of manifest nodes
+         edge.color =  "black",   # edge (arrow) colour
+         edge.width = 3,exoVar = F,          # thicker edges
+         label.cex = c(rep(1,6)), label.scale = FALSE, border.width = 3  #equal text size
+) # BOTTOM OF PAGE ####
+dev.off()
