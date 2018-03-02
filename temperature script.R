@@ -1125,26 +1125,7 @@ table(temp_data$loggerID)
 head(temp_data)
 temp_data$Treatment <- ifelse(temp_data$TRT == "B", "Open plots", "Exclosures")
 
-flux_box <- ggplot(data = temp_data, aes(x=Treatment, y=avg_daily_temp_range))+
-  geom_boxplot()+
-  ylab("Average daily\ntemperature fluctuations")+
-  xlab("")+
-  theme_classic()+
-  theme(text = element_text(size=15))
-#tiff("temp_fluctuations_box.tiff", height = 10, width = 10, units = "cm", res = 300)
-flux_box
-#dev.off()
 
-
-mod_fluc <- glmmTMB(data = temp_data,
-                    avg_daily_temp_range~Treatment+(1|TID),
-                    family = Gamma(link = "identity") )
-summary(mod_fluc)
-res_fluc <- resid(mod_fluc, "pearson")
-plot(fitted(mod_fluc), res_fluc)
-
-plotdf <- na.omit(temp_data[,c("Treatment", "avg_daily_temp_range")])
-plot(plotdf$Treatment, res_fluc)
 
 #*****************************************************##
 
@@ -1232,8 +1213,29 @@ dat3 <- aggregate(data = dat2,
 # Daily fluctuations  ####
 
 #*****************************************************##
+flux_box <- ggplot(data = temp_data, aes(x=Treatment, y=avg_daily_temp_range))+
+  geom_boxplot()+
+  ylab("Average daily\ntemperature fluctuations")+
+  xlab("")+
+  theme_classic()+
+  theme(text = element_text(size=15))
+#tiff("temp_fluctuations_box.tiff", height = 10, width = 10, units = "cm", res = 300)
+flux_box
+#dev.off()
 
-# a quick plot...:
+
+mod_fluc <- glmmTMB(data = temp_data,
+                    avg_daily_temp_range~Treatment+(1|TID),
+                    family = Gamma(link = "identity") )
+summary(mod_fluc)
+res_fluc <- resid(mod_fluc, "pearson")
+plot(fitted(mod_fluc), res_fluc)
+
+plotdf <- na.omit(temp_data[,c("Treatment", "avg_daily_temp_range")])
+plot(plotdf$Treatment, res_fluc)
+
+
+# Daily trends
 
 dat4 <- aggregate(data = dat2,
                   Temp~Time+f_TRT,
@@ -1392,7 +1394,7 @@ dat6.3 <- aggregate(data = dat6.2,
                     FUN = function(x) c(mn = mean(x), length = length(x), SD = sd(x) ))
 dat6.3 <- do.call(data.frame, dat6.3)
 dat6.4 <- dcast(data = dat6.2, TID+Date~TRT, value.var = "Temp", fun.aggregate = mean)
-dat6.4$diff <- dat6.4$B-dat6.4$UB
+dat6.4$diff <- dat6.4$UB-dat6.4$B
 dat6.5 <- aggregate(data = dat6.4, diff~Date, 
                     FUN = function(x) c(mn = mean(x), sd = sd(x), length = length(x)))
 dat6.5 <- do.call(data.frame, dat6.5)
@@ -1426,11 +1428,12 @@ p_line2 <- ggplot(data= dat6.5, aes(x=Date, y= diff.mn))+
             paste("temperature  (", degree~C, ")"))))+
   theme_classic()+theme(text = element_text(size=15)) +
   geom_ribbon(aes(ymax = upper, ymin = lower), alpha = 0.2)+
-  ylim(c(0,1.1))+
+  ylim(c(-1.1,0))+
+  #geom_hline(yintercept = 0)+
   theme(legend.position = "none")
 p_line2
 
-grid.arrange(p_line, p_line2)
+#grid.arrange(p_line, p_line2)   # y axis displaced
 g3<-ggplotGrob(p_line)
 g4<-ggplotGrob(p_line2)
 g <- gtable:::rbind_gtable(g3, g4, "first")
@@ -1440,7 +1443,7 @@ tiff("summer_main_results.tiff", height = 15, width = 20, units = "cm", res = 30
 grid.newpage()
 grid.draw(g)
 dev.off()
-
+getwd()
 
 
 setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER\\figures")
