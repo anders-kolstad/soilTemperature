@@ -1803,6 +1803,7 @@ grid.arrange(box_B, box_UB, nrow = 2)
 # The values are point intercept averagee frequencies after 16 pins in a 50x50 cm frame.
 
 setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER")
+
 PInt <- read_csv("PI_data.csv")
 
 names(PInt)
@@ -1832,6 +1833,14 @@ PInt <- PInt[,  c(rep(TRUE, times = 8),    # keep the first 8 columns
                        colSums(PInt[,9:ncol(PInt)], na.rm=T) > 0)]     # remove comlumns with no values
 
 colnames(PInt)
+
+# Making species list for the five sites only
+table(PInt$LocalityName2, PInt$YEAR)
+table(PInt$LocalityName2, PInt$Plot)
+# numbers are sums per quadrat
+
+SPlist <- PInt[,9:ncol(PInt)]
+#colSums(SPlist, na.rm=T)
 
 BLS_taxa <- c("Vaccinium myrtillus",
               "Vaccinium vitis-idaea")
@@ -1949,14 +1958,17 @@ PI_BM$shannon_vasc <- diversity(PI_BM[,9:48], index = "shannon")
 
 # ++++++++++++++++++++++++++++++++++++++ ##
 
-
+#setwd("/home/anders/Documents/R/Git projects/soilTemperature")
 SR_dat <- read.csv("speciesRichness_data.csv")
 
 # removing all but the five sites with temperature data:
 #table(SR_dat$LocalityName)
 #unique(PI_BM$LocalityName)
 MySites <- unique(PI_BM$LocalityName)
+#MySites <- unique(PInt$LocalityName)
+
 SR_dat2 <- filter(SR_dat, LocalityName %in% MySites)
+SR_dat2$LocalityName <- factor(SR_dat2$LocalityName)
 SR_dat2$LocalityName <- factor(SR_dat2$LocalityName)
 table(SR_dat2$LocalityName)
 
@@ -1984,7 +1996,7 @@ SR_dat2$LocalityName2[SR_dat2$LocalityName ==  "Sl_Tydal"] <-       "Seterdalsve
 SR_dat2$LocalityName2[SR_dat2$LocalityName ==  "Bratsberg"] <-       "Bratsberg"
 
 
-# remove some columns that are not vascular plant species
+# remove some columns that are not  plant species
 SR_dat2 <- select(SR_dat2,
                -Bare_ground, 
                -Bare_ground_branch, 
@@ -1996,8 +2008,30 @@ SR_dat2 <- select(SR_dat2,
                #-No_occurrence,
                -Sphagnum_sp)
                #-Stone)
+# creating/extractin species list with relative frequencies
+table(SR_dat2$LocalityName, SR_dat2$Year)
+table(SR_dat2$LocalityName, SR_dat2$Plot)
+
+names(SR_dat2)
+spListDat <- SR_dat2[SR_dat2$Method == "Point_Intercept",]
+table(spListDat$LocalityName, spListDat$Plot)
+#View(spListDat[spListDat$LocalityName == "namdalseid_1kub" & spListDat$Plot == 2,])
+# Some plots are split into two rows for some reason. Makes no difference if I aggregate,
+# or I can just manuall check the number of unique plots:
+length(unique(paste0(spListDat$LocalityName, spListDat$Treatment, spListDat$Plot)))
+# and its 98 (two missing)
+spListDat <- spListDat[,7:88]
+
+spListDat <- spListDat[,  colSums(spListDat, na.rm=T) > 0]     # remove comlumns with no values
 
 
+spList<- colSums(spListDat>0, na.rm=T)
+spList <- as.data.frame(spList)
+spList$Taxa <- rownames(spList)
+colnames(spList)[colnames(spList) == "spList"] <- "Frequency"
+spList <- spList[order(spList$Frequency, decreasing = T),]
+spList$relativeFrequency <- spList$Frequency/98
+#write.csv(spList, file = "speciesList_fivesites.csv", row.names = F)
 
 # summing species per row (ncluding trees:
 names(SR_dat2) # end with Viola_sp_
