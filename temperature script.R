@@ -158,6 +158,8 @@ table(master4$site)
 
 #*****************************************************##
 setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
+setwd("/home/anders/Documents/R/Git projects/soilTemperature")
+
 master4 <- read.csv("fullYearSoilTempSeries.csv")
 
 
@@ -167,14 +169,6 @@ master4$Time <- as.POSIXct(master4$Time, format="%H:%M", tz = "GMT")
 # Time2 gets given todays date for all the rows 
 
 master4$TID <- factor(master4$TID)
-
-
-
-
-
-
-
-
 
 
 #*****************************************************##
@@ -857,6 +851,13 @@ Soil_temperature <- read_excel("M:/Anders L Kolstad/systherb data/datasets/Soil 
                                                                  "text", "date", "date", "date", "numeric", 
                                                                  "text","text", "numeric", "numeric", "numeric", 
                                                                  "text")) 
+Soil_temperature <- read_excel("Soil temperature.xlsx", 
+                               sheet = "fullYear", col_types = c("numeric", 
+                                                                 "numeric", "text", "text", "text", 
+                                                                 "text", "date", "date", "date", "numeric", 
+                                                                 "text","text", "numeric", "numeric", "numeric", 
+                                                                 "text")) 
+
 Soil_temperature$treatment[Soil_temperature$treatment=="Browsed Control"] <- "B"
 Soil_temperature$treatment[Soil_temperature$treatment=="Exclosure"] <- "UB"
 
@@ -984,6 +985,30 @@ mean_summer <- aggregate(data = master7,
 
 mean_summer <- do.call(data.frame, mean_summer)
 head(mean_summer)
+
+# combine dataframes
+mean_winter$season <- "Winter"
+mean_summer$season <- "Summer"
+mean_winter2 <- select(mean_winter, trt, TID, mean = Mean_winter_temperature.mn, season)
+mean_summer2 <- select(mean_summer, trt, TID, mean = Mean_summer_temperature.mn, season)
+summer_and_winter <- rbind(mean_summer2, mean_winter2)
+summer_and_winter$trt <- factor(summer_and_winter$trt, levels=c("UB", "B"))
+
+#setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
+#tiff("mean_winter_and_summer_temperature.tiff",width=12,height=12, units = "cm", res = 300)
+ggplot(data = summer_and_winter, aes(x=trt, y=mean)) + 
+  geom_boxplot(width = 1) + 
+  theme_classic()+
+  theme(text = element_text(size=15), 
+        axis.text=element_text(size=15),
+        axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_x_discrete(labels=c("B" = "Open plots", "UB" = "Exclosures"))+
+  xlab("")+
+  ylab(expression(atop("Mean soil", "temperature " ( degree~C))))+
+  facet_wrap(~ season, scales = "free", ncol=2)
+dev.off()
+
+
 
 (pwinter <- ggplot(data = mean_winter, aes(x=trt, y=Mean_winter_temperature.mn))+
 geom_boxplot()+
