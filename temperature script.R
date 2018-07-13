@@ -2155,6 +2155,7 @@ write.csv(SEMdat3, file = "SEMdat.csv", row.names = F)
 
 #*************************************************##
 setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER")
+setwd("/home/anders/Documents/R/Git projects/soilTemperature")
 SEMdat <- read.csv("SEMdat.csv")
 
 #housekeeping
@@ -2164,8 +2165,10 @@ SEMdat <- read.csv("SEMdat.csv")
 SEMdat$uniquePlot <- factor(paste0(SEMdat$LocalityName3, SEMdat$Subplot, SEMdat$Treatment))
 SEMdat$fSubplot <- factor(SEMdat$Subplot)
 
-# removing one outlier plot with very deep moss.
 plot(SEMdat$Moss_depth)
+# possibly removing one outlier plot with very deep moss.
+(SEMdat[which(SEMdat$Moss_depth == max(SEMdat$Moss_depth)),"Moss_depth"]-mean(SEMdat[-which(SEMdat$Moss_depth == max(SEMdat$Moss_depth)),"Moss_depth"]))/ sd(SEMdat[-which(SEMdat$Moss_depth == max(SEMdat$Moss_depth)),"Moss_depth"])
+
 SEMdat <- SEMdat[-which(SEMdat$Moss_depth == max(SEMdat$Moss_depth)),]
 plot(SEMdat$Moss_depth)
 
@@ -2226,6 +2229,9 @@ Boxplot(SEMdat$avenellaBM~SEMdat$Treatment)
 
 # PAIRS ####
 source("M:/Anders L Kolstad/HIGHSTATS/AllRCode/HighstatLibV10.R")  
+source("/home/anders/Documents/R/HighstatLibV10.R")
+
+
 names(SEMdat)
 MyVars <- c("CCI", "Moss_depth", 
             "Soil_temp", 
@@ -2260,6 +2266,15 @@ MyVars6 <- c("CCI", "Moss_depth", "Soil_temp", "UCI",
              "simpsons_vasc", "simpsons_moss", "total_SR", "moss_SR", "vasc_SR")
 Mypairs(SEMdat[,MyVars6])
 # nothing
+
+MyVarsFull <- c("CCI", "Moss_depth", "Soil_temp", "avenellaBM", "shrubBM",
+                 "total_SR", "moss_SR", "vasc_SR")
+labs <- c("CCI", "Moss", "Temp.", "Avenella", "shrubs",
+          "total_SR", "moss_SR", "vasc_SR")
+#tiff("corr_matrix.tiff", units = "cm", res = 300, height = 40, width = 40)
+#Mypairs(SEMdat[,MyVarsFull])
+pairs(SEMdat[,MyVarsFull], labels = labs)
+#dev.off()
 
 setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
 
