@@ -6,6 +6,11 @@
 # FULL YEAR DATA ####
 
 #*****************************************************##
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> b95bfaea73b8632eb174fcec0b0632f0a6a538e3
 #Raw data:
 #  Temperature 2-4 times a day, 3 loggers per plot, total 12 sites and 72 samples
 #  Two datasets from two data off-loads:
@@ -159,6 +164,10 @@ table(master4$site)
 #*****************************************************##
 setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
 setwd("/home/anders/Documents/R/Git projects/soilTemperature")
+<<<<<<< HEAD
+=======
+
+>>>>>>> b95bfaea73b8632eb174fcec0b0632f0a6a538e3
 master4 <- read.csv("fullYearSoilTempSeries.csv")
 
 
@@ -168,14 +177,6 @@ master4$Time <- as.POSIXct(master4$Time, format="%H:%M", tz = "GMT")
 # Time2 gets given todays date for all the rows 
 
 master4$TID <- factor(master4$TID)
-
-
-
-
-
-
-
-
 
 
 #*****************************************************##
@@ -870,6 +871,10 @@ Soil_temperature <- read_excel("Soil temperature.xlsx",
                                                                  "text", "date", "date", "date", "numeric", 
                                                                  "text","text", "numeric", "numeric", "numeric", 
                                                                  "text")) 
+<<<<<<< HEAD
+=======
+
+>>>>>>> b95bfaea73b8632eb174fcec0b0632f0a6a538e3
 Soil_temperature$treatment[Soil_temperature$treatment=="Browsed Control"] <- "B"
 Soil_temperature$treatment[Soil_temperature$treatment=="Exclosure"] <- "UB"
 
@@ -1006,8 +1011,12 @@ mean_summer2 <- select(mean_summer, trt, TID, mean = Mean_summer_temperature.mn,
 summer_and_winter <- rbind(mean_summer2, mean_winter2)
 summer_and_winter$trt <- factor(summer_and_winter$trt, levels=c("UB", "B"))
 
+<<<<<<< HEAD
 setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
 
+=======
+#setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
+>>>>>>> b95bfaea73b8632eb174fcec0b0632f0a6a538e3
 #tiff("mean_winter_and_summer_temperature.tiff",width=12,height=12, units = "cm", res = 300)
 ggplot(data = summer_and_winter, aes(x=trt, y=mean)) + 
   geom_boxplot(width = 1) + 
@@ -1021,7 +1030,10 @@ ggplot(data = summer_and_winter, aes(x=trt, y=mean)) +
   facet_wrap(~ season, scales = "free", ncol=2)
 dev.off()
 
+<<<<<<< HEAD
   
+=======
+>>>>>>> b95bfaea73b8632eb174fcec0b0632f0a6a538e3
 
 
 (pwinter <- ggplot(data = mean_winter, aes(x=trt, y=Mean_winter_temperature.mn))+
@@ -1842,6 +1854,7 @@ grid.arrange(box_B, box_UB, nrow = 2)
 # The values are point intercept averagee frequencies after 16 pins in a 50x50 cm frame.
 
 setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER")
+
 PInt <- read_csv("PI_data.csv")
 
 names(PInt)
@@ -1879,6 +1892,10 @@ table(PInt$LocalityName2, PInt$Plot)
 
 SPlist <- PInt[,9:ncol(PInt)]
 #colSums(SPlist, na.rm=T)
+<<<<<<< HEAD
+=======
+
+>>>>>>> b95bfaea73b8632eb174fcec0b0632f0a6a538e3
 BLS_taxa <- c("Vaccinium myrtillus",
               "Vaccinium vitis-idaea")
 NLS_taxa <- c("Calluna vulgaris",
@@ -2003,6 +2020,10 @@ SR_dat <- read.csv("speciesRichness_data.csv")
 #unique(PI_BM$LocalityName)
 MySites <- unique(PI_BM$LocalityName)
 #MySites <- unique(PInt$LocalityName)
+<<<<<<< HEAD
+=======
+
+>>>>>>> b95bfaea73b8632eb174fcec0b0632f0a6a538e3
 SR_dat2 <- filter(SR_dat, LocalityName %in% MySites)
 SR_dat2$LocalityName <- factor(SR_dat2$LocalityName)
 SR_dat2$LocalityName <- factor(SR_dat2$LocalityName)
@@ -2032,7 +2053,7 @@ SR_dat2$LocalityName2[SR_dat2$LocalityName ==  "Sl_Tydal"] <-       "Seterdalsve
 SR_dat2$LocalityName2[SR_dat2$LocalityName ==  "Bratsberg"] <-       "Bratsberg"
 
 
-# remove some columns that are not vascular plant species
+# remove some columns that are not  plant species
 SR_dat2 <- select(SR_dat2,
                -Bare_ground, 
                -Bare_ground_branch, 
@@ -2068,6 +2089,10 @@ colnames(spList)[colnames(spList) == "spList"] <- "Frequency"
 spList <- spList[order(spList$Frequency, decreasing = T),]
 spList$relativeFrequency <- spList$Frequency/98
 #write.csv(spList, file = "speciesList_fivesites.csv", row.names = F)
+<<<<<<< HEAD
+=======
+
+>>>>>>> b95bfaea73b8632eb174fcec0b0632f0a6a538e3
 # summing species per row (ncluding trees:
 names(SR_dat2) # end with Viola_sp_
 SR_dat2$total_SpeciesRichness <- rowSums(SR_dat2[,7:88] > 0, na.rm=T)
@@ -2200,10 +2225,17 @@ SEMdat <- read.csv("SEMdat.csv")
 SEMdat$uniquePlot <- factor(paste0(SEMdat$LocalityName3, SEMdat$Subplot, SEMdat$Treatment))
 SEMdat$fSubplot <- factor(SEMdat$Subplot)
 
+<<<<<<< HEAD
 
 plot(SEMdat$Moss_depth)
 # possibly removing one outlier plot with very deep moss.
 (SEMdat[which(SEMdat$Moss_depth == max(SEMdat$Moss_depth)),"Moss_depth"]-mean(SEMdat[-which(SEMdat$Moss_depth == max(SEMdat$Moss_depth)),"Moss_depth"]))/ sd(SEMdat[-which(SEMdat$Moss_depth == max(SEMdat$Moss_depth)),"Moss_depth"])
+=======
+plot(SEMdat$Moss_depth)
+# possibly removing one outlier plot with very deep moss.
+(SEMdat[which(SEMdat$Moss_depth == max(SEMdat$Moss_depth)),"Moss_depth"]-mean(SEMdat[-which(SEMdat$Moss_depth == max(SEMdat$Moss_depth)),"Moss_depth"]))/ sd(SEMdat[-which(SEMdat$Moss_depth == max(SEMdat$Moss_depth)),"Moss_depth"])
+
+>>>>>>> b95bfaea73b8632eb174fcec0b0632f0a6a538e3
 SEMdat <- SEMdat[-which(SEMdat$Moss_depth == max(SEMdat$Moss_depth)),]
 plot(SEMdat$Moss_depth)
 
@@ -2265,6 +2297,11 @@ Boxplot(SEMdat$avenellaBM~SEMdat$Treatment)
 # PAIRS ####
 source("M:/Anders L Kolstad/HIGHSTATS/AllRCode/HighstatLibV10.R")  
 source("/home/anders/Documents/R/HighstatLibV10.R")
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> b95bfaea73b8632eb174fcec0b0632f0a6a538e3
 names(SEMdat)
 
 MyVars <- c("CCI", 
@@ -2329,6 +2366,10 @@ labs <- c("CCI", "Moss", "Temp.", "Avenella", "shrubs",
 #Mypairs(SEMdat[,MyVarsFull])
 pairs(SEMdat[,MyVarsFull], labels = labs)
 #dev.off()
+<<<<<<< HEAD
+=======
+
+>>>>>>> b95bfaea73b8632eb174fcec0b0632f0a6a538e3
 setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
 
 # Treatment is strongest on CCI, temp, vegetation heigh. 
