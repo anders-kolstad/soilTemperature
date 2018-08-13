@@ -6,7 +6,6 @@
 # FULL YEAR DATA ####
 
 #*****************************************************##
-
 #Raw data:
 #  Temperature 2-4 times a day, 3 loggers per plot, total 12 sites and 72 samples
 #  Two datasets from two data off-loads:
@@ -49,6 +48,8 @@ library(gtable)
 
 source("M:/Anders L Kolstad/HIGHSTATS/AllRCode/HighstatLibV10.R")
 source("M:/Anders L Kolstad/HIGHSTATS/AllRCode/R2glmms.R")
+source("M:/Anders L Kolstad/R/functions/multiplot.R")
+
 # !!!  Jump from here.... !!! ####
 
 
@@ -157,6 +158,7 @@ table(master4$site)
 
 #*****************************************************##
 setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
+setwd("/home/anders/Documents/R/Git projects/soilTemperature")
 master4 <- read.csv("fullYearSoilTempSeries.csv")
 
 
@@ -391,16 +393,22 @@ p <- p+   geom_line(size=2)
 p <- p + xlab("") 
 p <- p + ylab(expression(atop(paste("Soil temp."), ( degree~C))))
 
-p <- p + theme_classic()+theme(text = element_text(size=15))
-#p <- p + scale_linetype_discrete(name="",
-#                                 breaks=c("B", "UB"),
-#                                 labels=c("Open plots", "Exclosure"))
-p <- p + theme(plot.margin=unit(c(0.1,1.5,0.1,1),"cm"))
-p <- p + theme(axis.title =  element_text(hjust = 0.5))  #default
-p <- p + theme(axis.title.x=element_blank(),
+p <- p + theme_classic()
+p <- p + theme(plot.margin=unit(c(0.1,1.5,0.1,1),"cm"),
+               text = element_text(size=15),
+               axis.title =  element_text(hjust = 0.5),
+               axis.title.x=element_blank(),
                axis.text.x=element_blank(),
                axis.ticks.x=element_blank(),
-               axis.line.x = element_blank())
+               axis.line.x = element_blank(),
+               panel.grid.minor = element_blank(),
+               panel.grid.major.x = element_blank(),
+               panel.grid.major.y = element_line(colour = "grey90", size = 0.3))
+
+p
+
+
+
 
 #               legend.justification=c(1,1), 
 #               legend.position=c(1,1),
@@ -761,7 +769,7 @@ g2<-ggplotGrob(p2.3)
 g<-gtable:::rbind_gtable(g1, g2, "first")
 panels <- g$layout$t[grep("panel", g$layout$name)]
 g$heights[panels] <- unit(c(1,3), "null")
-#tiff("full_year_main_results.tiff", height = 15, width = 20, units = "cm", res = 300)
+tiff("full_year_main_results.tiff", height = 15, width = 20, units = "cm", res = 300)
 grid.newpage()
 grid.draw(g)
 dev.off()
@@ -782,7 +790,7 @@ t3.4$plot_mean <- t3.5$Mean_daily_temperature[match(t3.4$link, t3.5$link)]
 
 plot.new()
 setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
-pdf("plot temp against trt diff_4.pdf",width=16,height=16)
+#pdf("plot temp against trt diff_4.pdf",width=16,height=16)
 
 par(mfrow=c(4,4), new = TRUE)
 
@@ -851,6 +859,12 @@ head(winter2)
 
 # import moss depth
 Soil_temperature <- read_excel("M:/Anders L Kolstad/systherb data/datasets/Soil temperature.xlsx", 
+                               sheet = "fullYear", col_types = c("numeric", 
+                                                                 "numeric", "text", "text", "text", 
+                                                                 "text", "date", "date", "date", "numeric", 
+                                                                 "text","text", "numeric", "numeric", "numeric", 
+                                                                 "text")) 
+Soil_temperature <- read_excel("Soil temperature.xlsx", 
                                sheet = "fullYear", col_types = c("numeric", 
                                                                  "numeric", "text", "text", "text", 
                                                                  "text", "date", "date", "date", "numeric", 
@@ -957,7 +971,7 @@ p4.2 <- p4.2 + theme(plot.margin=unit(c(0.1,1.5,0.1,1),"cm"))
 
 setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER\\figures")
 #pdf("Moss_winter_effect6.pdf",width=8,height=16)
-tiff("Moss_winter_effect.tiff", height = 30, width = 15, units = "cm", res = 300)
+#tiff("Moss_winter_effect.tiff", height = 30, width = 15, units = "cm", res = 300)
 multiplot(p4, p4.2, cols = 1)
 dev.off()
 
@@ -984,6 +998,32 @@ mean_summer <- aggregate(data = master7,
 mean_summer <- do.call(data.frame, mean_summer)
 head(mean_summer)
 
+# combine dataframes
+mean_winter$season <- "Winter"
+mean_summer$season <- "Summer"
+mean_winter2 <- select(mean_winter, trt, TID, mean = Mean_winter_temperature.mn, season)
+mean_summer2 <- select(mean_summer, trt, TID, mean = Mean_summer_temperature.mn, season)
+summer_and_winter <- rbind(mean_summer2, mean_winter2)
+summer_and_winter$trt <- factor(summer_and_winter$trt, levels=c("UB", "B"))
+
+setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
+
+#tiff("mean_winter_and_summer_temperature.tiff",width=12,height=12, units = "cm", res = 300)
+ggplot(data = summer_and_winter, aes(x=trt, y=mean)) + 
+  geom_boxplot(width = 1) + 
+  theme_classic()+
+  theme(text = element_text(size=15), 
+        axis.text=element_text(size=15),
+        axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_x_discrete(labels=c("B" = "Open plots", "UB" = "Exclosures"))+
+  xlab("")+
+  ylab(expression(atop("Mean soil", "temperature " ( degree~C))))+
+  facet_wrap(~ season, scales = "free", ncol=2)
+dev.off()
+
+  
+
+
 (pwinter <- ggplot(data = mean_winter, aes(x=trt, y=Mean_winter_temperature.mn))+
 geom_boxplot()+
 xlab("Treatment") +
@@ -1002,10 +1042,10 @@ theme(text = element_text(size=15))+
     )
 
 
-setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
-tiff("mean_winter_and_summer_temperature.tiff",width=20,height=12, units = "cm", res = 300)
-grid.arrange(pwinter, psummer, ncol = 2)
-dev.off()
+#setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
+#tiff("mean_winter_and_summer_temperature.tiff",width=20,height=12, units = "cm", res = 300)
+#grid.arrange(pwinter, psummer, ncol = 2)
+#dev.off()
 
 
 
@@ -1832,6 +1872,13 @@ PInt <- PInt[,  c(rep(TRUE, times = 8),    # keep the first 8 columns
 
 colnames(PInt)
 
+# Making species list for the five sites only
+table(PInt$LocalityName2, PInt$YEAR)
+table(PInt$LocalityName2, PInt$Plot)
+# numbers are sums per quadrat
+
+SPlist <- PInt[,9:ncol(PInt)]
+#colSums(SPlist, na.rm=T)
 BLS_taxa <- c("Vaccinium myrtillus",
               "Vaccinium vitis-idaea")
 NLS_taxa <- c("Calluna vulgaris",
@@ -1948,14 +1995,16 @@ PI_BM$shannon_vasc <- diversity(PI_BM[,9:48], index = "shannon")
 
 # ++++++++++++++++++++++++++++++++++++++ ##
 
-
+#setwd("/home/anders/Documents/R/Git projects/soilTemperature")
 SR_dat <- read.csv("speciesRichness_data.csv")
 
 # removing all but the five sites with temperature data:
 #table(SR_dat$LocalityName)
 #unique(PI_BM$LocalityName)
 MySites <- unique(PI_BM$LocalityName)
+#MySites <- unique(PInt$LocalityName)
 SR_dat2 <- filter(SR_dat, LocalityName %in% MySites)
+SR_dat2$LocalityName <- factor(SR_dat2$LocalityName)
 SR_dat2$LocalityName <- factor(SR_dat2$LocalityName)
 table(SR_dat2$LocalityName)
 
@@ -1995,9 +2044,30 @@ SR_dat2 <- select(SR_dat2,
                #-No_occurrence,
                -Sphagnum_sp)
                #-Stone)
+# creating/extractin species list with relative frequencies
+table(SR_dat2$LocalityName, SR_dat2$Year)
+table(SR_dat2$LocalityName, SR_dat2$Plot)
+
+names(SR_dat2)
+spListDat <- SR_dat2[SR_dat2$Method == "Point_Intercept",]
+table(spListDat$LocalityName, spListDat$Plot)
+#View(spListDat[spListDat$LocalityName == "namdalseid_1kub" & spListDat$Plot == 2,])
+# Some plots are split into two rows for some reason. Makes no difference if I aggregate,
+# or I can just manuall check the number of unique plots:
+length(unique(paste0(spListDat$LocalityName, spListDat$Treatment, spListDat$Plot)))
+# and its 98 (two missing)
+spListDat <- spListDat[,7:88]
+
+spListDat <- spListDat[,  colSums(spListDat, na.rm=T) > 0]     # remove comlumns with no values
 
 
-
+spList<- colSums(spListDat>0, na.rm=T)
+spList <- as.data.frame(spList)
+spList$Taxa <- rownames(spList)
+colnames(spList)[colnames(spList) == "spList"] <- "Frequency"
+spList <- spList[order(spList$Frequency, decreasing = T),]
+spList$relativeFrequency <- spList$Frequency/98
+#write.csv(spList, file = "speciesList_fivesites.csv", row.names = F)
 # summing species per row (ncluding trees:
 names(SR_dat2) # end with Viola_sp_
 SR_dat2$total_SpeciesRichness <- rowSums(SR_dat2[,7:88] > 0, na.rm=T)
@@ -2120,6 +2190,7 @@ write.csv(SEMdat3, file = "SEMdat.csv", row.names = F)
 
 #*************************************************##
 setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER")
+setwd("/home/anders/Documents/R/Git projects/soilTemperature")
 SEMdat <- read.csv("SEMdat.csv")
 
 #housekeeping
@@ -2129,8 +2200,10 @@ SEMdat <- read.csv("SEMdat.csv")
 SEMdat$uniquePlot <- factor(paste0(SEMdat$LocalityName3, SEMdat$Subplot, SEMdat$Treatment))
 SEMdat$fSubplot <- factor(SEMdat$Subplot)
 
-# removing one outlier plot with very deep moss.
+
 plot(SEMdat$Moss_depth)
+# possibly removing one outlier plot with very deep moss.
+(SEMdat[which(SEMdat$Moss_depth == max(SEMdat$Moss_depth)),"Moss_depth"]-mean(SEMdat[-which(SEMdat$Moss_depth == max(SEMdat$Moss_depth)),"Moss_depth"]))/ sd(SEMdat[-which(SEMdat$Moss_depth == max(SEMdat$Moss_depth)),"Moss_depth"])
 SEMdat <- SEMdat[-which(SEMdat$Moss_depth == max(SEMdat$Moss_depth)),]
 plot(SEMdat$Moss_depth)
 
@@ -2191,7 +2264,29 @@ Boxplot(SEMdat$avenellaBM~SEMdat$Treatment)
 
 # PAIRS ####
 source("M:/Anders L Kolstad/HIGHSTATS/AllRCode/HighstatLibV10.R")  
+source("/home/anders/Documents/R/HighstatLibV10.R")
 names(SEMdat)
+
+MyVars <- c("CCI", 
+            "Moss_depth", 
+            "Soil_temp", 
+            "avenellaBM",
+            "shrubBM",
+            "total_SR",
+            "moss_SR",
+            "vasc_SR",
+            "shannon_vasc",
+            "shannon_moss",
+            "Treatment")
+#tiff("correlation_matrix.tiff", 
+     units = "cm", 
+     res = 150, 
+     height = 50, 
+     width = 50)
+
+Mypairs(SEMdat[,MyVars])
+#dev.off()
+
 MyVars <- c("CCI", "Moss_depth", 
             "Soil_temp", 
             "UCI", "Treatment")
@@ -2226,6 +2321,14 @@ MyVars6 <- c("CCI", "Moss_depth", "Soil_temp", "UCI",
 Mypairs(SEMdat[,MyVars6])
 # nothing
 
+MyVarsFull <- c("CCI", "Moss_depth", "Soil_temp", "avenellaBM", "shrubBM",
+                 "total_SR", "moss_SR", "vasc_SR")
+labs <- c("CCI", "Moss", "Temp.", "Avenella", "shrubs",
+          "total_SR", "moss_SR", "vasc_SR")
+#tiff("corr_matrix.tiff", units = "cm", res = 300, height = 40, width = 40)
+#Mypairs(SEMdat[,MyVarsFull])
+pairs(SEMdat[,MyVarsFull], labels = labs)
+#dev.off()
 setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
 
 # Treatment is strongest on CCI, temp, vegetation heigh. 
@@ -2419,7 +2522,7 @@ drop1(Soil_temp, test = "Chi")
 
 # **Avenella####
 MyVars <- c("avenellaBM", "Treatment",
-             "Moss_depth", "CCI", "Soil_temp_C")
+             "Moss_depth", "CCI", "Soil_temp")
 Mypairs(SEMdat[,MyVars])
 
 # remove CCi based on bivariate plots
@@ -3504,8 +3607,8 @@ n1 <-  ggplot(data = SEMdat,
              y = avenellaBM))+
     geom_point()+
     theme_classic()+
-    xlab(expression(atop("Soil temperature",( degree~C)))) +
-    ylab(expression(paste(italic(Avenella ), paste(" (g m"^"-2", ")"))))+
+    xlab(expression(paste("Soil temperature ",( degree~C)))) +
+      ylab(expression(atop(paste(italic(Avenella )), paste("(g m"^"-2", ")"))))+
     geom_line(data=avenella_temp_line2, aes(x=V3, y = V2), linetype = 1)
   
 
@@ -3516,7 +3619,7 @@ n2 <-   ggplot(data = SEMdat,
     geom_boxplot()+
     theme_classic()+
     xlab("Treatment") +
-    ylab(expression(paste(italic(Avenella ), paste(" (g m"^"-2", ")"))))
+    ylab(expression(atop(paste(italic(Avenella )), paste("(g m"^"-2", ")"))))
 
   
   
@@ -3527,7 +3630,7 @@ n3 <- ggplot(data = SEMdat,
   geom_boxplot()+
   theme_classic()+
   xlab("Treatment") +
-  ylab("Canopy cover (%)")
+  ylab(expression(atop("Canopy cover",  "(%)")))
 
 #3
 
@@ -3547,7 +3650,7 @@ n5 <- ggplot(data = SEMdat,
   geom_point()+
   theme_classic()+
   xlab("Moss depth (cm)") +
-  ylab("Bryophyte\nspecies richness")+
+  ylab(expression(atop("Bryophyte", "species richness")))+
   geom_line(data=mossSR_depth_line, aes(x=Moss_depth, y = V2))
 
 
@@ -3558,11 +3661,14 @@ n6 <- ggplot(data = SEMdat,
   theme_classic()+
   xlab("Moss depth (cm)") +
   ylab("Shannon entropy\n(bryophytes)")+
+  #ylab(expression(atop("Bryophyte", "shannon entropy")))+
   geom_smooth(method= "lm", se=F, colour = "black")
 
 library(grid)
 setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER/figures")
-tiff("strong_arcs.tiff", units = "cm", res = 300, height = 40, width = 20)
+#tiff("strong_arcs.tiff", units = "cm", res = 300, height = 40, width = 10)
+tiff("strong_arcs_30x10.tiff", units = "cm", res = 300, height = 30, width = 10)
+
 grid.draw(rbind(ggplotGrob(n1), 
                 ggplotGrob(n2), 
                 ggplotGrob(n3), 
