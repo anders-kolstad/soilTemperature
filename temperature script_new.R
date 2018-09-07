@@ -3459,7 +3459,7 @@ corrs3 <- c("shannon_vasc ~~ total_SR",
             "moss_SR ~~ shannon_moss",
             "moss_SR ~~ total_SR",
             "shannon_moss ~~ total_SR",
-            "CCI ~~ Moss_depth",
+            #"CCI ~~ Moss_depth",
             "Log_shrubBM ~~ avenellaBM",
             "Moss_depth ~~ Log_shrubBM",
             "avenellaBM ~~ Moss_depth")
@@ -3502,25 +3502,11 @@ SEM_tSR_4 <- list(
                  random = ~1| LocalityName3, data = SEMdat))
 
 
-# spesifying correlated errors that should not be avaluated in d-sep test or Fishers C
 
 
 
 
 
-#corrs4 <- c("shannon_vasc ~~ total_SR", 
-            "shannon_vasc ~~ vasc_SR",
-            "shannon_vasc ~~ moss_SR",
-            "shannon_vasc ~~ shannon_moss",
-            "vasc_SR ~~ shannon_moss",
-            "vasc_SR ~~ total_SR",
-            "vasc_SR ~~ moss_SR",
-            "moss_SR ~~ shannon_moss",
-            "moss_SR ~~ total_SR",
-            "shannon_moss ~~ total_SR",
-            "CCI ~~ Moss_depth",
-            "Log_shrubBM ~~ avenellaBM",
-            "Moss_depth ~~ Log_shrubBM")
 
 
 
@@ -3536,8 +3522,8 @@ setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
 
 
 
-(c.tabl <- sem.coefs(SEM1, SEMdat, standardize = "none", intercept = F,
-                     corr.errors = corrs3))
+#(c.tabl <- sem.coefs(SEM1, SEMdat, standardize = "none", intercept = F,
+#                     corr.errors = corrs3))
 (c.tabl <- sem.coefs(SEM_tSR_4, SEMdat, standardize = "none", intercept = F,
                      corr.errors = corrs3))
 class(c.tabl$response)
