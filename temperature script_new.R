@@ -424,6 +424,43 @@ p
 
 
 
+# SUPP FIG ####
+plot1datS <- aggregate(data = t3.2, 
+                      cbind(Mean_daily_temperature = Mean_daily_temperature,
+                            daily_range = daily_range) ~ 
+                        Date+trt, 
+                      FUN = function(x) c(mn = mean(x), length = length(x), SD = sd(x) ) )
+plot1datS <- do.call(data.frame, plot1datS)
+
+pS <-  ggplot(data = plot1datS, 
+             aes(x = Date, 
+                 y = Mean_daily_temperature.mn,  group = trt, linetype = trt))+ 
+geom_line(size=2)   +
+xlab("") +
+ ylab(expression(atop(paste("Soil temp."), ( degree~C))))+
+ theme_classic()+
+ theme(plot.margin=unit(c(0.1,1.5,0.1,1),"cm"),
+               text = element_text(size=15),
+               axis.title =  element_text(hjust = 0.5),
+               axis.title.x=element_blank(),
+               axis.text.x=element_blank(),
+               axis.ticks.x=element_blank(),
+               axis.line.x = element_blank(),
+               panel.grid.minor = element_blank(),
+               panel.grid.major.x = element_blank(),
+               panel.grid.major.y = element_line(colour = "grey90", size = 0.3))+
+
+#               legend.justification=c(1,1), 
+#               legend.position=c(1,1),
+#               legend.background = element_rect(fill=NA),
+#               plot.title = element_text(hjust = 0.5, size=22),
+#               legend.key.size = unit(1,"line"),
+#               legend.text=element_text(size=15))
+ylim(0,15)
+pS      
+# END SUPP FIG ####
+
+
 # Rate of change plot ####
 # take the full dataset:
 head(t2)
@@ -566,6 +603,7 @@ p_lag3.2 <-  ggplot(data = rel_shift4,
     labels=c("Browsed", "Exclosure"))+
   theme(plot.margin=unit(c(0.1,1.5,0.1,1),"cm"))+
   theme(axis.title =  element_text(hjust = 0.5))
+p_lag3.2 <- p_lag3.2 +  scale_x_date(date_labels = "%m-%Y",date_breaks = "2 months")
 # rate of change similar between productivity classes
 
 p_lag4 <-  ggplot(data = rel_shift3, 
@@ -707,18 +745,20 @@ p2.3 <- p2 + geom_line(data = t4.7,
 p2.3 <- p2.3 + scale_colour_discrete(
                          name="Site productivity",
                          breaks=c("High", "Low", "High + Thinned"),
-                         labels=c("High (n=5)", "Low (n=7)","High +\nThinned (n=3)"))
+                         labels=c("High (n=5)", "Low (n=7)","High + thinned (n=3)"))
 p2.3 <- p2.3 + theme_classic()+theme(plot.margin=unit(c(0.1,1,0.1,1),"cm"))+
   theme(text = element_text(size=15),
         legend.justification=c(0,1), 
-        legend.position=c(0,1),
+        legend.position=c(0.55,1),
         legend.background = element_rect(fill=NA),
         plot.title = element_text(hjust = 0.5, size=22),
         legend.key.size = unit(1,"line"),
-        legend.text=element_text(size=15)) 
-p2.3 <- p2.3 +scale_x_date(date_breaks = "3 month", labels=date_format("%b-%Y"),
+        legend.text=element_text(size=15),
+        axis.text.x=element_text(angle=45, hjust=1)) 
+p2.3 <- p2.3 +scale_x_date(date_breaks = "2 month", labels=date_format("%m-%Y"),
                            limits = as.Date(c("2016-05-19","2017-04-27")))
 p2.3
+
 #*****************************************************##
 # Plot 3:####
 #effect daliy fluctuations over time
@@ -761,15 +801,15 @@ p3.2
 
 
 
-
+getwd()
 setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER\\figures")
-
+library(grid)
 g1<-ggplotGrob(p)
 g2<-ggplotGrob(p2.3)
 g<-gtable:::rbind_gtable(g1, g2, "first")
 panels <- g$layout$t[grep("panel", g$layout$name)]
 g$heights[panels] <- unit(c(1,3), "null")
-tiff("full_year_main_results.tiff", height = 15, width = 20, units = "cm", res = 300)
+#tiff("full_year_main_results.tiff", height = 12, width = 15, units = "cm", res = 600)
 grid.newpage()
 grid.draw(g)
 dev.off()
@@ -864,12 +904,12 @@ Soil_temperature <- read_excel("M:/Anders L Kolstad/systherb data/datasets/Soil 
                                                                  "text", "date", "date", "date", "numeric", 
                                                                  "text","text", "numeric", "numeric", "numeric", 
                                                                  "text")) 
-Soil_temperature <- read_excel("Soil temperature.xlsx", 
-                               sheet = "fullYear", col_types = c("numeric", 
-                                                                 "numeric", "text", "text", "text", 
-                                                                 "text", "date", "date", "date", "numeric", 
-                                                                 "text","text", "numeric", "numeric", "numeric", 
-                                                                 "text")) 
+#Soil_temperature <- read_excel("Soil temperature.xlsx", 
+#                               sheet = "fullYear", col_types = c("numeric", 
+#                                                                 "numeric", "text", "text", "text", 
+#                                                                 "text", "date", "date", "date", "numeric", 
+#                                                                 "text","text", "numeric", "numeric", "numeric", 
+#                                                                 "text")) 
 Soil_temperature$treatment[Soil_temperature$treatment=="Browsed Control"] <- "B"
 Soil_temperature$treatment[Soil_temperature$treatment=="Exclosure"] <- "UB"
 
@@ -1021,7 +1061,66 @@ ggplot(data = summer_and_winter, aes(x=trt, y=mean)) +
   facet_wrap(~ season, scales = "free", ncol=2)
 dev.off()
 
-  
+
+
+# ********************************#
+## model winter temp
+# ********************************#
+
+
+head(winter2)
+
+#import productivity index
+prod_index_ID_name_converter <- read.csv("M:/Anders L Kolstad/R/R_projects/succession_paper/prod_index_ID_name_converter.csv", sep=";")
+head(prod_index_ID_name_converter)
+
+# convert TID to locationID
+flater <- read_excel("M:/Anders L Kolstad/systherb data/site info/flater.xlsx", 
+                     +     sheet = "Sheet2")
+
+winter2$locationID <- flater$LokalitetID[match(winter2$TID, flater$Trondelag_only_site_numbers)]
+head(winter2)
+table(winter2$locationID)
+
+# remove thined sites
+#levels(winter2$prod_class)
+winter2 <- filter(winter2,
+               prod_class != "High + Thinned")
+table(winter2$locationID)
+
+# include prod index:
+winter2$PI <- prod_index_ID_name_converter$productivity[match(winter2$locationID, prod_index_ID_name_converter$locationID)]
+head(winter2)
+
+# plot - investigate
+boxplot(winter2$Mean_winter_temperature.mn~ winter2$trt)
+plot(winter2$PI~ winter2$Mean_winter_temperature.mn)
+
+# model
+library(lmerTest)
+winterMod <- lmer(Mean_winter_temperature.mn~trt*PI + (1|site), data=winter2)
+summary(winterMod)
+plot(winterMod) #OK
+winterMod_add <- update(winterMod, .~. -trt:PI)
+anova(winterMod, winterMod_add)
+summary(winterMod_add)
+#drop pi
+winterMod_trt <- update(winterMod_add, .~. -PI)
+anova(winterMod_add, winterMod_trt)
+#drop trt
+
+winterMod_intercept <- update(winterMod_trt, .~. -trt)
+anova(winterMod_trt, winterMod_intercept)
+
+# add  pi 
+winterMod_pi <- update(winterMod_intercept, .~. +PI)
+anova(winterMod_intercept, winterMod_pi)
+
+
+
+summary(winterMod2)
+summary(winterMod4)
+
 
 
 (pwinter <- ggplot(data = mean_winter, aes(x=trt, y=Mean_winter_temperature.mn))+
@@ -1313,6 +1412,7 @@ p_daily2 <- ggplot(data = dat4, aes(x=Time, y=diff
   theme_classic()+theme(legend.position="none")+
   theme(text = element_text(size=15))
   
+
 library(grid)
 setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER\\figures")
 #tiff("Daily Summer Soil Temp Fluctuations.tiff", height = 15, width = 15, units = "cm", res = 300)
@@ -1470,8 +1570,19 @@ p_line2 <- ggplot(data= dat6.5, aes(x=Date, y= diff.mn))+
   geom_ribbon(aes(ymax = upper, ymin = lower), alpha = 0.2)+
   ylim(c(-1.1,0))+
   #geom_hline(yintercept = 0)+
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  scale_x_date(labels=date_format("%d-%m-%y"))
+               
+
 p_line2
+effectSize <- aggregate(data = dat6.2, Temp ~ TID + TRT, FUN = mean)
+effectSize2 <- dcast(effectSize, TID~TRT, 
+                     value.var = "Temp", 
+                     fun.aggregate = sum)
+effectSize2$diff <- effectSize2$UB - effectSize2$B
+mean(effectSize2$diff)
+sd(effectSize2$diff)/sqrt(5)
+
 
 #grid.arrange(p_line, p_line2)   # y axis displaced
 g3<-ggplotGrob(p_line)
@@ -2632,6 +2743,7 @@ plot(shrubs)
 qqnorm(resid(shrubs))
 drop1(shrubs, test = "Chi")
 shrubs <- update(shrubs, .~. -Soil_temp_C)
+
 drop1(shrubs, test = "Chi")
 summary(shrubs)
 plot(shrubs)
@@ -2694,7 +2806,9 @@ qqnorm(resid(shrubs4, type = "pearson")) # no
 # log transform
 shrubs5 <- lme(Log_shrubBM ~ Treatment+CCI+Soil_temp_C,
                    random = ~ 1 | LocalityName3, data = SEMdat)
-qqnorm(resid(shrubs5, type = "pearson")) # no
+qqnorm(resid(shrubs5, type = "pearson")) # tja
+qqline(resid(shrubs5, type = "pearson")) # 
+
 plot(SEMdat$Log_shrubBM)
 summary(shrubs5)
 plot(shrubs5)
@@ -3603,39 +3717,64 @@ n1 <-  ggplot(data = SEMdat,
     geom_line(data=avenella_temp_line2, aes(x=V3, y = V2), linetype = 1)
   
 
-#2  
-n2 <-   ggplot(data = SEMdat,
-         aes(x = Treatment,
-             y = avenellaBM))+
-    geom_boxplot()+
-    theme_classic()+
-    xlab("Treatment") +
-    ylab(expression(atop(paste(italic(Avenella )), paste("(g m"^"-2", ")"))))
+  
 
-  
-  
-#2  
-n3 <- ggplot(data = SEMdat,
+
+n2 <- ggplot(data = SEMdat,
        aes(x = Treatment,
            y = CCI))+
   geom_boxplot()+
   theme_classic()+
   xlab("Treatment") +
-  ylab(expression(atop("Canopy cover",  "(%)")))
+  ylab(expression(atop("Canopy cover",  "(%)")))+
+  scale_x_discrete(labels=c("Exclosed" = "Exclosures", "Open plots" = "Open plots"))
 
-#3
 
-n4 <- ggplot(data = SEMdat,
+
+n3 <- ggplot(data = SEMdat,
        aes(x = CCI,
            y = Soil_temp))+
   geom_point()+
   theme_classic()+
-  xlab("Canopy Cover Index (%)") +
+  xlab("Canopy cover (%)") +
   ylab(expression(atop("Soil temperature",( degree~C))))+
   geom_smooth(method = "lm", se = F, colour = "black")+
   xlim(c(0,100))
 
+n4 <- ggplot(data = SEMdat,
+             aes(x = avenellaBM,
+                 y = total_SR))+
+  geom_point()+
+  theme_classic()+
+  ylab("Total species richness") +
+  xlab(expression(atop(paste(italic(Avenella )), paste("(g m"^"-2", ")"))))+
+  geom_smooth(method = "lm", se = F, colour = "black")+
+  xlim(c(0,80))
+
 n5 <- ggplot(data = SEMdat,
+             aes(x = CCI,
+                 y = vasc_SR))+
+  geom_point()+
+  theme_classic()+
+  ylab("Vascular plant\nspecies richness") +
+  xlab("Canopy cover (%)")+
+  geom_smooth(method = "lm", se = F, colour = "black")
+  
+
+ggplot(data = SEMdat,
+       aes(x = CCI,
+           y = Log_shrubBM))+
+  geom_point()+
+  theme_classic()+
+  ylab(expression(paste("Dwarf shrub biomass ", "(g m"^"-2", ")"))) +
+  xlab("Canopy cover (%)")+
+  #geom_smooth(method = "lm", se = F, colour = "black")+
+  geom_abline(intercept =  2.0564978, slope = 0.0112909)+
+  xlim(c(0,80))
+# I wont include this one because refitted slope with one IV is negative but full model shows positive beta
+  
+
+ggplot(data = SEMdat,
        aes(x = Moss_depth,
            y = moss_SR))+
   geom_point()+
@@ -3645,7 +3784,7 @@ n5 <- ggplot(data = SEMdat,
   geom_line(data=mossSR_depth_line, aes(x=Moss_depth, y = V2))
 
 
-n6 <- ggplot(data = SEMdat,
+ggplot(data = SEMdat,
        aes(x = Moss_depth,
            y = shannon_moss))+
   geom_point()+
@@ -3655,18 +3794,27 @@ n6 <- ggplot(data = SEMdat,
   #ylab(expression(atop("Bryophyte", "shannon entropy")))+
   geom_smooth(method= "lm", se=F, colour = "black")
 
+ggplot(data = SEMdat,
+                aes(x = Treatment,
+                    y = avenellaBM))+
+           geom_boxplot()+
+           theme_classic()+
+           xlab("Treatment") +
+           scale_x_discrete(labels=c("Exclosed" = "Exclosures", "Open plots" = "Open plots"))+
+           ylab(expression(atop(paste(italic(Avenella )), paste("(g m"^"-2", ")"))))
+
 library(grid)
 setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER/figures")
 #tiff("strong_arcs.tiff", units = "cm", res = 300, height = 40, width = 10)
-tiff("strong_arcs_30x10.tiff", units = "cm", res = 300, height = 30, width = 10)
-
-grid.draw(rbind(ggplotGrob(n1), 
-                ggplotGrob(n2), 
+tiff("strong_arcs_25x10.tiff", units = "cm", res = 300, height = 25, width = 10)
+vp <- viewport(x=0.51,y=0.5,width=0.95, height=0.95)
+pushViewport(vp)
+grid.draw(rbind(ggplotGrob(n2), 
                 ggplotGrob(n3), 
+                ggplotGrob(n1), 
                 ggplotGrob(n4),
                 ggplotGrob(n5),
-                ggplotGrob(n6),
-                  size = "last"))
+                                  size = "last"))
 
 
 dev.off()
