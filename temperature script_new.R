@@ -339,10 +339,16 @@ t3.gdd$gdd <- 0
 
 for(i in unique(t3.gdd$u)){
   t3.gdd$gdd[t3.gdd$u == i & t3.gdd$Date == min(t3.gdd$Date[t3.gdd$u == i])] <- 
-    t3.gdd$Mean_daily_temperature[t3.gdd$u == i & t3.gdd$Date == min(t3.gdd$Date[t3.gdd$u == i])]
+    ifelse(
+      t3.gdd$Mean_daily_temperature[t3.gdd$u == i & t3.gdd$Date == min(t3.gdd$Date[t3.gdd$u == i])] > 0, 
+      t3.gdd$Mean_daily_temperature[t3.gdd$u == i & t3.gdd$Date == min(t3.gdd$Date[t3.gdd$u == i])],
+      0)
   for(p in seq(min(t3.gdd$Date)+1, max(t3.gdd$Date), by = "days" )){
-    t3.gdd$gdd[t3.gdd$u == i & t3.gdd$Date == p] <- t3.gdd$Mean_daily_temperature[t3.gdd$u == i & t3.gdd$Date == p]+
-      t3.gdd$gdd[t3.gdd$u == i & t3.3$Date == p-1]
+      t3.gdd$gdd[t3.gdd$u == i & t3.gdd$Date == p] <- 
+        ifelse(t3.gdd$Mean_daily_temperature[t3.gdd$u == i & t3.gdd$Date == p] >0,
+          t3.gdd$Mean_daily_temperature[t3.gdd$u == i & t3.gdd$Date == p]+
+                t3.gdd$gdd[t3.gdd$u == i & t3.gdd$Date == p-1],
+          t3.gdd$gdd[t3.gdd$u == i & t3.gdd$Date == p-1])
     
   }  }
 
@@ -361,7 +367,9 @@ t3.gdd2$gddSE <- t3.gdd2$gdd.SD/t3.gdd2$gdd.length
 
 head(t3.gdd2)
 getwd()
-tiff("GDD.tiff", height = 12, width = 12, units = "cm", res = 600)
+library(ggplot2)
+library(scales)
+tiff("GDD.tiff", height = 10, width = 10, units = "cm", res = 600)
 ggplot(data = t3.gdd2,      aes(x = Date, 
                                 y = gdd.mn,
                                 group = trt,
