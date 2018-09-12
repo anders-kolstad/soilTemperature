@@ -331,6 +331,65 @@ t3.2 <- filter(t3,
 table(t3.2$site)
 
 
+#GDD ####
+# growing degree days >0degrees C
+t3.gdd <- t3.2
+t3.gdd$u <- paste0(t3.gdd$site, t3.gdd$trt)
+t3.gdd$gdd <- 0
+
+for(i in unique(t3.gdd$u)){
+  t3.gdd$gdd[t3.gdd$u == i & t3.gdd$Date == min(t3.gdd$Date[t3.gdd$u == i])] <- 
+    t3.gdd$Mean_daily_temperature[t3.gdd$u == i & t3.gdd$Date == min(t3.gdd$Date[t3.gdd$u == i])]
+  for(p in seq(min(t3.gdd$Date)+1, max(t3.gdd$Date), by = "days" )){
+    t3.gdd$gdd[t3.gdd$u == i & t3.gdd$Date == p] <- t3.gdd$Mean_daily_temperature[t3.gdd$u == i & t3.gdd$Date == p]+
+      t3.gdd$gdd[t3.gdd$u == i & t3.3$Date == p-1]
+    
+  }  }
+
+t3.gdd2 <- aggregate(data = t3.gdd, 
+                gdd ~ 
+                  trt+
+                  Date, 
+                FUN = function(x) c(mn = mean(x), length = length(x), SD = sd(x) ) )
+
+
+
+t3.gdd2 <- do.call(data.frame, t3.gdd2)
+
+table(t3.gdd2$gdd.length) # n=12 for all days - good
+t3.gdd2$gddSE <- t3.gdd2$gdd.SD/t3.gdd2$gdd.length
+
+head(t3.gdd2)
+getwd()
+tiff("GDD.tiff", height = 12, width = 12, units = "cm", res = 600)
+ggplot(data = t3.gdd2,      aes(x = Date, 
+                                y = gdd.mn,
+                                group = trt,
+                                colour = trt,
+                                fill = trt))+ 
+    geom_ribbon( aes(      ymax = gdd.mn+1.96*gddSE, 
+                           ymin = gdd.mn-1.96*gddSE,alpha = 1))+
+  xlab("") +
+  ylab("Growing degree days")+
+  scale_fill_discrete(
+    name="Treatment",
+    breaks=c("B", "UB"),
+    labels=c("Open plots", "Exclosures"))+
+  theme_classic()+
+  theme(text = element_text(size=15),
+        plot.margin=unit(c(0.1,1,0.1,1),"cm"),
+        legend.justification=c(0,1), 
+        legend.position=c(0.55,0.3),
+        legend.background = element_rect(fill=NA),
+        legend.key.size = unit(1,"line"),
+        legend.text=element_text(size=15),
+        axis.text.x=element_text(angle=45, hjust=1))+ 
+        scale_x_date(date_breaks = "2 month", labels=date_format("%m-%Y"),
+                           limits = as.Date(c("2016-05-19","2017-04-27")))+
+  guides(colour = FALSE, lines = FALSE, alpha = FALSE)
+  
+dev.off()  
+# END GDD ####
 
 # get means per treatment
 t4 <- aggregate(data = t3.2, 
