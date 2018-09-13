@@ -333,9 +333,21 @@ table(t3.2$site)
 
 #GDD ####
 # growing degree days >0degrees C
-t3.gdd <- t3.2
-t3.gdd$u <- paste0(t3.gdd$site, t3.gdd$trt)
+t3.gdd <- aggregate(data = master5, 
+               cbind(Mean_daily_temperature = Temp) ~ 
+                 TID+
+                 site+
+                 trt+
+                 subplot+
+                 prod_class+
+                 Date, 
+               FUN = mean)
+t3.gdd <- filter(t3.gdd,
+       prod_class != "High + Thinned")
+t3.gdd$u <- paste0(t3.gdd$site, t3.gdd$trt, t3.gdd$subplot)
+t3.gdd$u <- as.factor(t3.gdd$u)
 t3.gdd$gdd <- 0
+table(t3.gdd$Date)
 
 for(i in unique(t3.gdd$u)){
   t3.gdd$gdd[t3.gdd$u == i & t3.gdd$Date == min(t3.gdd$Date[t3.gdd$u == i])] <- 
@@ -353,24 +365,26 @@ for(i in unique(t3.gdd$u)){
   }  }
 
 t3.gdd2 <- aggregate(data = t3.gdd, 
+                     gdd ~ 
+                       site+
+                       trt+
+                       Date, 
+                     FUN = mean )
+t3.gdd3 <- aggregate(data = t3.gdd2, 
                 gdd ~ 
                   trt+
                   Date, 
                 FUN = function(x) c(mn = mean(x), length = length(x), SD = sd(x) ) )
+t3.gdd3 <- do.call(data.frame, t3.gdd3)
 
+table(t3.gdd3$gdd.length) # n=12 for all days - good
+t3.gdd3$gddSE <- t3.gdd3$gdd.SD/t3.gdd3$gdd.length
 
-
-t3.gdd2 <- do.call(data.frame, t3.gdd2)
-
-table(t3.gdd2$gdd.length) # n=12 for all days - good
-t3.gdd2$gddSE <- t3.gdd2$gdd.SD/t3.gdd2$gdd.length
-
-head(t3.gdd2)
+head(t3.gdd3)
 getwd()
 library(ggplot2)
 library(scales)
-tiff("GDD.tiff", height = 10, width = 10, units = "cm", res = 600)
-ggplot(data = t3.gdd2,      aes(x = Date, 
+gdd1 <- ggplot(data = t3.gdd3,      aes(x = Date, 
                                 y = gdd.mn,
                                 group = trt,
                                 colour = trt,
@@ -378,16 +392,16 @@ ggplot(data = t3.gdd2,      aes(x = Date,
     geom_ribbon( aes(      ymax = gdd.mn+1.96*gddSE, 
                            ymin = gdd.mn-1.96*gddSE,alpha = 1))+
   xlab("") +
-  ylab("Growing degree days")+
+  ylab("Growing degree days (GDD)")+
   scale_fill_discrete(
     name="Treatment",
     breaks=c("B", "UB"),
-    labels=c("Open plots", "Exclosures"))+
+    labels=c("Open plots (O)", "Exclosures (E)"))+
   theme_classic()+
   theme(text = element_text(size=15),
         plot.margin=unit(c(0.1,1,0.1,1),"cm"),
         legend.justification=c(0,1), 
-        legend.position=c(0.55,0.3),
+        legend.position=c(0.5,0.8),
         legend.background = element_rect(fill=NA),
         legend.key.size = unit(1,"line"),
         legend.text=element_text(size=15),
@@ -396,7 +410,72 @@ ggplot(data = t3.gdd2,      aes(x = Date,
                            limits = as.Date(c("2016-05-19","2017-04-27")))+
   guides(colour = FALSE, lines = FALSE, alpha = FALSE)
   
+
+
+
+# get final gdd
+t3.gdd_lastday <- t3.gdd[t3.gdd$Date == max(t3.gdd$Date),]
+table(t3.gdd_lastday$site, t3.gdd_lastday$subplot)
+head(t3.gdd_lastday)
+t3.gdd_lastday2 <- aggregate(data = t3.gdd_lastday,
+                             gdd ~ TID + site + trt,
+                             FUN = mean)
+head(t3.gdd_lastday2)
+boxplot(t3.gdd_lastday2$gdd~t3.gdd_lastday2$trt)
+
+gdd2 <- ggplot(data = t3.gdd_lastday2, aes(x=trt, y=gdd))+
+  geom_boxplot()+
+  ylab("GDD")+
+  xlab("Treatment")+
+  scale_x_discrete(breaks = c("B", "UB"),
+                     labels = c("O", "E"))+
+  theme(text = element_text(size=15))
+
+library(grid)
+gdd1g <- ggplotGrob(gdd1)
+gdd2g <- ggplotGrob(gdd2)
+tiff("GDD.tiff", height = 12, width = 12, units = "cm", res = 600)
+grid.draw(gdd1g)
+gdd2g <- editGrob(gdd2g, vp=viewport(x=0.7, y=0.4, width=0.4, height=0.4))
+grid.draw(gdd2g)
 dev.off()  
+
+
+
+#*****************************
+# model GDD ####
+#*****************************
+
+head(t3.gdd_lastday)
+#import productivity index
+prod_index_ID_name_converter <- read.csv("M:/Anders L Kolstad/R/R_projects/succession_paper/prod_index_ID_name_converter.csv", sep=";")
+# convert TID to locationID
+flater <- read_excel("M:/Anders L Kolstad/systherb data/site info/flater.xlsx", 
+                          sheet = "Sheet2")
+
+t3.gdd_lastday$locationID <- flater$LokalitetID[match(t3.gdd_lastday$TID, flater$Trondelag_only_site_numbers)]
+head(t3.gdd_lastday)
+table(t3.gdd_lastday$locationID)
+
+
+# include prod index:
+t3.gdd_lastday$PI <- prod_index_ID_name_converter$productivity[match(t3.gdd_lastday$locationID, prod_index_ID_name_converter$locationID)]
+head(t3.gdd_lastday)
+
+
+library(lmerTest)
+modgdd <- lmer(data = t3.gdd_lastday,
+               gdd~trt*PI +(1|site)              )
+plot(modgdd) # OK
+summary(modgdd)
+modgdd_add <- update(modgdd, .~. -trt:PI)
+summary(modgdd_add)
+modgdd_trt <- update(modgdd_add, .~. -PI)
+summary(modgdd_trt)
+modgdd_int <- update(modgdd_trt, .~. -trt)
+anova(modgdd_trt, modgdd_int)
+
+
 # END GDD ####
 
 # get means per treatment
