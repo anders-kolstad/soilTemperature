@@ -474,7 +474,8 @@ modgdd_trt <- update(modgdd_add, .~. -PI)
 summary(modgdd_trt)
 modgdd_int <- update(modgdd_trt, .~. -trt)
 anova(modgdd_trt, modgdd_int)
-
+modgdd_pi <- update(modgdd_add, .~. -trt)
+anova(modgdd_pi, modgdd_int)
 
 # END GDD ####
 
@@ -1222,7 +1223,7 @@ head(prod_index_ID_name_converter)
 
 # convert TID to locationID
 flater <- read_excel("M:/Anders L Kolstad/systherb data/site info/flater.xlsx", 
-                     +     sheet = "Sheet2")
+                          sheet = "Sheet2")
 
 winter2$locationID <- flater$LokalitetID[match(winter2$TID, flater$Trondelag_only_site_numbers)]
 head(winter2)
