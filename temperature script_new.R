@@ -434,7 +434,7 @@ gdd2 <- ggplot(data = t3.gdd_lastday2, aes(x=trt, y=gdd))+
 library(grid)
 gdd1g <- ggplotGrob(gdd1)
 gdd2g <- ggplotGrob(gdd2)
-tiff("GDD.tiff", height = 12, width = 12, units = "cm", res = 600)
+#tiff("GDD.tiff", height = 12, width = 12, units = "cm", res = 600)
 grid.draw(gdd1g)
 gdd2g <- editGrob(gdd2g, vp=viewport(x=0.7, y=0.4, width=0.4, height=0.4))
 grid.draw(gdd2g)
@@ -1195,7 +1195,13 @@ summer_and_winter$trt <- factor(summer_and_winter$trt, levels=c("UB", "B"))
 
 setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
 
-#tiff("mean_winter_and_summer_temperature.tiff",width=12,height=12, units = "cm", res = 300)
+gdd_dat <- t3.gdd_lastday2[,c("trt", "TID", "gdd")]
+colnames(gdd_dat)[colnames(gdd_dat)=="gdd"] <- "mean"
+gdd_dat$season <- "GDD"
+summer_and_winter <- rbind(summer_and_winter, gdd_dat)
+summer_and_winter$season <- factor(summer_and_winter$season, levels =c("Summer", "Winter", "GDD"))
+
+tiff("Fig4_new.tiff",width=12,height=12, units = "cm", res = 300)
 ggplot(data = summer_and_winter, aes(x=trt, y=mean)) + 
   geom_boxplot(width = 1) + 
   theme_classic()+
@@ -1205,7 +1211,9 @@ ggplot(data = summer_and_winter, aes(x=trt, y=mean)) +
   scale_x_discrete(labels=c("B" = "Open plots", "UB" = "Exclosures"))+
   xlab("")+
   ylab(expression(atop("Mean soil", "temperature " ( degree~C))))+
-  facet_wrap(~ season, scales = "free", ncol=2)
+  facet_wrap(~ season, scales = "free", ncol=3)
+
+
 dev.off()
 
 
@@ -2525,64 +2533,6 @@ source("M:/Anders L Kolstad/HIGHSTATS/AllRCode/HighstatLibV10.R")
 source("/home/anders/Documents/R/HighstatLibV10.R")
 names(SEMdat)
 
-MyVars <- c("CCI", 
-            "Moss_depth", 
-            "Soil_temp", 
-            "avenellaBM",
-            "shrubBM",
-            "total_SR",
-            "moss_SR",
-            "vasc_SR",
-            "shannon_vasc",
-            "shannon_moss",
-            "Treatment")
-#tiff("correlation_matrix.tiff", 
-     units = "cm", 
-     res = 150, 
-     height = 50, 
-     width = 50)
-
-Mypairs(SEMdat[,MyVars])
-#dev.off()
-
-MyVars <- c("CCI", "Moss_depth", 
-            "Soil_temp", 
-            "UCI", "Treatment")
-Mypairs(SEMdat[,MyVars])
-
-MyVars2 <- c("simpsons_vasc", "simpsons_moss", 
-             "total_SR", "moss_SR", "vasc_SR")
-Mypairs(SEMdat[,MyVars2])
-
-MyVars3 <- c("moss_SR", "vasc_SR", "total_SR",
-             "avenellaBM", "shrubBM")
-Mypairs(SEMdat[,MyVars3])
-
-MyVars4 <- c("simpsons_moss", "simpsons_vasc",
-             "gramBM", "avenellaBM", "shrubBM", "thBM", "shBM")
-Mypairs(SEMdat[,MyVars4])
-# moss diversity is not explained. 
-# vasc diversity differs between richness and simpsons, 
-# but is negatively correlated with shrubs and positivly correlated with short herbs. 
-# Not affected by grasses as hypothesised (but looks non-linear). Neither all grasses or Avenella alone.
-# All grasses and Avenella work differently (different signs)
-
-
-MyVars5 <- c("CCI", "Moss_depth", "Soil_temp", "UCI",
-                "avenellaBM", "shrubBM")
-Mypairs(SEMdat[,MyVars5])
-# Avenella like warm soil and no moss (non-linear).
-# Problem about correation between UCI and vegetation biomass
-
-MyVars6 <- c("CCI", "Moss_depth", "Soil_temp", "UCI",
-             "simpsons_vasc", "simpsons_moss", "total_SR", "moss_SR", "vasc_SR")
-Mypairs(SEMdat[,MyVars6])
-# nothing
-
-MyVarsFull <- c("CCI", "Moss_depth", "Soil_temp", "avenellaBM", "shrubBM",
-                 "total_SR", "moss_SR", "vasc_SR")
-labs <- c("CCI", "moss depth", "temp.", "Avenella", "shrubs",
-          "total SR", "moss SR", "vasc. SR")
 
 panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
   usr <- par("usr"); on.exit(par(usr))
@@ -2603,18 +2553,30 @@ panel.hist <- function(x, ...){
   rect(breaks[-nB], 0, breaks[-1], y, col = "grey", ...)
 }
 
+MyVarsSR <- c("CCI", "Moss_depth", "Soil_temp", "avenellaBM", "shrubBM",
+                "total_SR", "moss_SR", "vasc_SR")
+labs <- c("CCI", "moss depth", "temp.", "Avenella", "shrubs",
+          "total SR", "moss SR", "vasc. SR")
+
+setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
 #tiff("figS1_corrMat.tiff", units = "cm", res = 300, height = 30, width = 30)
-pairs(SEMdat[,MyVarsFull], gap = .35,
+pairs(SEMdat[,MyVarsSR], gap = .35,
       lower.panel = panel.smooth,
       upper.panel = panel.cor,
       diag.panel = panel.hist, labels = labs,
       pch=1, col.smooth = "black", span = 0.5)
-
-
-
-dev.off()
-setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
-
+#dev.off()
+MyVarsSh <- c("CCI", "Moss_depth", "Soil_temp", "avenellaBM", "shrubBM",
+              "shannon_moss", "shannon_vasc")
+labs2 <- c("CCI", "moss depth", "temp.", "Avenella", "shrubs",
+          "Shannon\n(mosses)", "Shannon\n(vasc.)")
+#tiff("figS1b_corrMat.tiff", units = "cm", res = 300, height = 30, width = 30)
+pairs(SEMdat[,MyVarsSh], gap = .35,
+      lower.panel = panel.smooth,
+      upper.panel = panel.cor,
+      diag.panel = panel.hist, labels = labs2,
+      pch=1, col.smooth = "black", span = 0.5)
+#dev.off()
 # Treatment is strongest on CCI, temp, vegetation heigh. 
 # Not present on moss depth or biomass
 # CCI and temp are negatively correlated, quite linear (beta, zero-inlated)
