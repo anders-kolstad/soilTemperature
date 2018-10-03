@@ -3142,6 +3142,7 @@ plot(SEMdat$Moss_depth, resVSR) #OK
                        aes(x = CCI,
                            y = vasc_SR))+
     geom_point()+
+    geom_smooth(method="lm")+
     theme_classic()+
     xlab("CCI") +
     ylab("Vascular plant\nspecies richness"))
@@ -3172,6 +3173,7 @@ plot(SEMdat$avenellaBM, resVSR) #OK
                           aes(x = shrubBM,
                               y = vasc_SR))+
     geom_point()+
+    geom_smooth(method="lm")+
     theme_classic()+
     xlab(expression(paste("Dwarf shrubs (g m"^"-2", ")"))) +
     ylab("Vascular plant\nspecies richness"))
@@ -3669,6 +3671,7 @@ moss_sr_and_temp <- partial.resid(moss_SR~Soil_temp_C, SEM_tSR_1, SEMdat)
 #----------------------------------------------------------#
 #----------------------------------------------------------#
 
+# OLD ####
 SEM1 <- list(
   # FOREST STRUCTURE:
   CCI =        lme(CCI ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat),
@@ -3698,6 +3701,16 @@ SEM1 <- list(
  
   )
 
+(SEM1_fit <- sem.fit(SEM1, SEMdat, conditional = F, 
+                     corr.errors = corrs3)) 
+setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
+write.csv(SEM1_fit, "SEM1_fit.csv")
+(SEM1_indFit <- sem.model.fits(SEM1))  # dont work for gamma
+write.csv(SEM1_indFit, "SEM1_indFit.csv")
+
+# END OLD ####
+
+
 corrs3 <- c("shannon_vasc ~~ total_SR", 
             "shannon_vasc ~~ vasc_SR",
             "shannon_vasc ~~ moss_SR",
@@ -3708,17 +3721,11 @@ corrs3 <- c("shannon_vasc ~~ total_SR",
             "moss_SR ~~ shannon_moss",
             "moss_SR ~~ total_SR",
             "shannon_moss ~~ total_SR",
-            #"CCI ~~ Moss_depth",
             "Log_shrubBM ~~ avenellaBM",
             "Moss_depth ~~ Log_shrubBM",
             "avenellaBM ~~ Moss_depth")
 
-(SEM1_fit <- sem.fit(SEM1, SEMdat, conditional = F, 
-                          corr.errors = corrs3)) 
-setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
-write.csv(SEM1_fit, "SEM1_fit.csv")
-(SEM1_indFit <- sem.model.fits(SEM1))  # dont work for gamma
-write.csv(SEM1_indFit, "SEM1_indFit.csv")
+
 
 # this one includes moss depth
 SEM_tSR_4 <- list(
@@ -3751,6 +3758,57 @@ SEM_tSR_4 <- list(
                  random = ~1| LocalityName3, data = SEMdat))
 
 
+# REANALYSIS 3oct
+# this one includes moss depth
+# and binary data for avenella and shrubs
+SEMdat$binAvenella <- ifelse(SEMdat$avenellaBM <= median(SEMdat$avenellaBM), 0,1)
+SEMdat$binShrubs <- ifelse(SEMdat$shrubBM <= median(SEMdat$shrubBM), 0, 1)
+table(SEMdat$binAvenella)
+table(SEMdat$binShrubs)
+
+hist1 <- ggplot(SEMdat, aes(x=shrubBM)) +
+  geom_histogram(colour="black", fill="white") +
+  geom_vline(aes(xintercept=median(shrubBM, na.rm=T)),   
+             color="red", linetype="dashed", size=1)+
+  xlab("Shrub biomass (g)")
+  
+hist2 <- ggplot(SEMdat, aes(x=avenellaBM)) +
+  geom_histogram(colour="black", fill="white", bin) +
+  geom_vline(aes(xintercept=median(avenellaBM, na.rm=T)),   
+             color="red", linetype="dashed", size=1)+
+  xlab("Avenella biomass (g)")
+getwd()
+#tiff("twoHists.tiff", units = "cm", res = 600, height = 10, width = 10)
+grid.arrange(hist1, hist2, ncol=2)
+dev.off()
+SEMlist <- list(
+  
+  # FOREST STRUCTURE:
+  Moss_depth = lme(Moss_depth    ~ Treatment, random = ~ 1 | LocalityName3, data = SEMdat),
+  
+  CCI =        lme(CCI           ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat),
+  
+  # SOIL TEMPERATURE
+  Soil_temp =  lme(Soil_temp_C   ~ CCI,
+                   random = ~ 1 | LocalityName3, data = SEMdat),
+  
+  # COMPETITIVE SPECIES
+  avenella =   glmmTMB(avenellaBM+1 ~ Soil_temp_C+I(Soil_temp_C^2)
+                       + ( 1 | LocalityName3), family = Gamma(link = "identity"), data = SEMdat),
+  shrubs =     lme(Log_shrubBM ~ Treatment,
+                   random = ~ 1 | LocalityName3, data = SEMdat),
+  
+  # DIVERSITY 
+  tSR      = lme(total_SR      ~ Log_shrubBM,
+                                            random = ~1| LocalityName3, data = SEMdat),
+  vascS    = lme(shannon_vasc  ~ Log_shrubBM, 
+                                            random = ~1| LocalityName3, data = SEMdat),
+  mossS    = lme(shannon_moss  ~ Moss_depth+I(Moss_depth^2),
+                                            random = ~1| LocalityName3, data = SEMdat),
+  vSR      = lme(vasc_SR       ~ Log_shrubBM, 
+                                            random = ~1| LocalityName3, data = SEMdat),
+  mSR      = lme(moss_SR       ~ Moss_depth+I(Moss_depth^2), 
+                                            random = ~1| LocalityName3, data = SEMdat))
 
 
 
@@ -3759,10 +3817,9 @@ SEM_tSR_4 <- list(
 
 
 
+(SEM_tSR_4_fit <- sem.fit(SEM_tSR_4, SEMdat, conditional = F,   corr.errors = corrs3)) 
+(SEM3oct       <- sem.fit(SEMlist,   SEMdat, conditional = F,   corr.errors = corrs3))
 
-
-(SEM_tSR_4_fit <- sem.fit(SEM_tSR_4, SEMdat, conditional = F, 
-                          corr.errors = corrs3)) 
 setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
 #write.csv(SEM_tSR_4_fit, "SEM_tSR_4_modFit.csv")
 (SEM_tSR_4_indFit <- sem.model.fits(SEM_tSR_4))  # dont work for gamma
