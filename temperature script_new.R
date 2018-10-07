@@ -2937,10 +2937,10 @@ binnedplot(x = fitted(shrubs_bin),
 
 # GLMM  
 #  gamma model
-shrubs_gamma <- glmmTMB(shrubBM+2 ~ Treatment+CCI+Soil_temp_C
-                   + ( 1 | LocalityName3), family = Gamma(link = "identity"), data = SEMdat)
-qqnorm(resid(shrubs_gamma, type = "pearson")) # no
 
+shrubs_gamma <- glmmTMB(shrubBM+2 ~ Treatment
+                   + ( 1 | LocalityName3), family = Gamma(link = "log"), data = SEMdat)
+qqnorm(resid(shrubs_gamma, type = "pearson")) # no
 # scaling:
 shrubs2 <- glmmTMB(shrubBM+2 ~ Treatment+sMoss_depth+CCI+sSoil_temp
                  + ( 1 | LocalityName3), family = Gamma(link = "identity"), data = SEMdat)
@@ -3846,7 +3846,7 @@ corrs4 <- c("shannon_vasc ~~ total_SR",
 SEMlist <- list(
   
   # FOREST STRUCTURE:
-  Moss_depth = lme(Moss_depth ~ Treatment, random = ~ 1 | LocalityName3, data = SEMdat),
+  #Moss_depth = lme(Moss_depth ~ Treatment, random = ~ 1 | LocalityName3, data = SEMdat),
   
   CCI =        lme(CCI ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat),
   
@@ -3855,8 +3855,12 @@ SEMlist <- list(
                    random = ~ 1 | LocalityName3, data = SEMdat),
   
   # COMPETITIVE SPECIES
-  avenella =   lme(Log_avenellaBM ~ Treatment+Soil_temp_C+I(Soil_temp_C^2),
-                   random = ~ 1 | LocalityName3, data = SEMdat),
+  avenella =   glmmTMB(avenellaBM+0.1 ~ Treatment+Soil_temp_C+I(Soil_temp_C^2)
+                       + ( 1 | LocalityName3), 
+                       family = Gamma(link = "identity"), 
+                       data = SEMdat),
+  #avenella =   lme(Log_avenellaBM ~ Treatment+Soil_temp_C+I(Soil_temp_C^2),
+  #                 random = ~ 1 | LocalityName3, data = SEMdat),
   shrubs =     lme(Log_shrubBM ~ Treatment+CCI,
                    random = ~ 1 | LocalityName3, data = SEMdat),
   
@@ -3865,7 +3869,7 @@ SEMlist <- list(
                  random = ~1| LocalityName3, data = SEMdat),
   vascS    = lme(shannon_vasc  ~ CCI, 
                  random = ~1| LocalityName3, data = SEMdat),
-  mossS    = lme(shannon_moss  ~ Soil_temp_C+Treatment+CCI+Moss_depth+I(Moss_depth^2),
+  mossS    = lme(shannon_moss  ~ avenellaBM+Moss_depth+I(Moss_depth^2),
                  random = ~1| LocalityName3, data = SEMdat),
   vSR    =  lme(vasc_SR  ~ Log_shrubBM, 
                 random = ~1| LocalityName3, data = SEMdat),
@@ -3878,21 +3882,23 @@ SEMlist <- list(
 
 
 
-(SEM_tSR_4_fit <- sem.fit(SEM_tSR_4, SEMdat, conditional = F,   corr.errors = corrs3)) 
+#(SEM_tSR_4_fit <- sem.fit(SEM_tSR_4, SEMdat, conditional = F,   corr.errors = corrs3)) 
 (SEM3oct       <- sem.fit(SEMlist,   SEMdat, conditional = F,   corr.errors = corrs3))
 
 setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
 #write.csv(SEM_tSR_4_fit, "SEM_tSR_4_modFit.csv")
-(SEM_tSR_4_indFit <- sem.model.fits(SEM_tSR_4))  # dont work for gamma
+#(SEM_tSR_4_indFit <- sem.model.fits(SEM_tSR_4))  # dont work for gamma
+(SEM3oct_indFit <- sem.model.fits(SEMlist))  # dont work for gamma
+
 #write.csv(SEM_tSR_4_indFit, "SEM_tSR_4_indFit.csv")
 
 
 
 
 
-(c.tabl <- sem.coefs(SEM_tSR_4, SEMdat, standardize = "none", intercept = F,
+(c.tabl.old <- sem.coefs(SEM_tSR_4, SEMdat, standardize = "none", intercept = F,
                      corr.errors = corrs3))
-(c.tabl3oct <- sem.coefs(SEMlist, SEMdat, standardize = "none", intercept = F,
+(c.tabl <- sem.coefs(SEMlist, SEMdat, standardize = "none", intercept = F,
                      corr.errors = corrs3))
 class(c.tabl$response)
 c.tabl$response <- as.character(c.tabl$response)
@@ -3944,7 +3950,7 @@ c.tabl$predictor[c.tabl$predictor == "I(Soil_temp_C^2)"]  <- c("Soil temperature
 c.tabl$predictor[c.tabl$predictor == "I(Moss_depth^2)"]  <- c("Moss depth ^2")
 
 
-write.csv(c.tabl, "SEM_coeff_raw13082018.csv", row.names = F)
+write.csv(c.tabl, "SEM_coeff_raw07102018.csv", row.names = F)
 
 
 #----------------------------------------------------------#
