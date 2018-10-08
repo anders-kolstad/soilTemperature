@@ -2207,16 +2207,18 @@ PI_BM$tBiomass <- rowSums(PI_BM[,9:ncol(PI_BM)], na.rm=T)
 
 # calculating biomass for some groups that I aim to include in the SEM
 PI_BM$shrubBiomass <- rowSums(PI_BM[,c(BLS_taxa, NLS_taxa)], na.rm=T)
-PI_BM$thBiomass <- rowSums(PI_BM[,TH_taxa], na.rm=T)
-PI_BM$shBiomass <- rowSums(PI_BM[,SH_taxa], na.rm=T)
+#PI_BM$thBiomass <- rowSums(PI_BM[,TH_taxa], na.rm=T)
+#PI_BM$shBiomass <- rowSums(PI_BM[,SH_taxa], na.rm=T)
 PI_BM$graminoidBiomass <- rowSums(PI_BM[,c(NLG_taxa, BLG_taxa)], na.rm=T)
 
 
 PI_BM$uniquePlot <- paste0(PI_BM$LocalityName2, PI_BM$Treatment, PI_BM$Plot)
 
-SEMvars <- c("tFREQ", "tBiomass", "shrubBiomass", "thBiomass", "shBiomass", "graminoidBiomass")
+SEMvars <- c("tBiomass", "shrubBiomass", "graminoidBiomass")
 source("M:/Anders L Kolstad/HIGHSTATS/AllRCode/HighstatLibV10.R")
 Mypairs(PI_BM[, SEMvars])
+# tBiomass and shrubs are correlated 0.67, but Tbiomass has less (no) zeroes
+
 # tFREQ is correlated to grasses (and small herbs) 
 # and Biomass is corelated to shrubs (and tall herbs).
 # tFREQ and Biomass are only weakly correlated.
@@ -2410,9 +2412,9 @@ SR_dat3$shannon_moss <- SR_dat7$Point_Intercept[match(SR_dat3$uniquePlot, SR_dat
 SEMdat <- read_excel("M:/Anders L Kolstad/systherb data/datasets/Soil temperature.xlsx", 
                      sheet = "summer2017")
 SEMdat$uniquePlot <- paste0(SEMdat$LocalityName2, SEMdat$TRT, SEMdat$Subplot)
-SEMdat$UCI <- PI_BM$UnderstoryCoverIndex[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
-SEMdat$simpsons_vasc <- PI_BM$Simpsons_vasc[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
-SEMdat$simpsons_moss <- SR_dat3$Simpsons_moss[match(SEMdat$uniquePlot, SR_dat3$uniquePlot)]
+#SEMdat$UCI <- PI_BM$UnderstoryCoverIndex[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
+#SEMdat$simpsons_vasc <- PI_BM$Simpsons_vasc[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
+#SEMdat$simpsons_moss <- SR_dat3$Simpsons_moss[match(SEMdat$uniquePlot, SR_dat3$uniquePlot)]
 SEMdat$shannon_vasc <- PI_BM$shannon_vasc[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
 SEMdat$shannon_moss <- SR_dat3$shannon_moss[match(SEMdat$uniquePlot, SR_dat3$uniquePlot)]
 
@@ -2422,6 +2424,8 @@ SEMdat$total_SR <- SR_dat3$total_SR[match(SEMdat$uniquePlot, SR_dat3$uniquePlot)
 SEMdat$moss_SR <- SR_dat3$moss_SR[match(SEMdat$uniquePlot, SR_dat3$uniquePlot)]
 SEMdat$vasc_SR <- SR_dat3$vasc_SR[match(SEMdat$uniquePlot, SR_dat3$uniquePlot)]
 SEMdat$shrubBM <- PI_BM$shrubBiomass[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
+SEMdat$tBiomass <- PI_BM$tBiomass[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
+
 #SEMdat$thBM <- PI_BM$thBiomass[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
 #SEMdat$shBM <- PI_BM$shBiomass[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
 #SEMdat$gramBM <- PI_BM$graminoidBiomass[match(SEMdat$uniquePlot, PI_BM$uniquePlot)]
@@ -2436,9 +2440,9 @@ SEMdat$Soil_temp <- as.numeric(SEMdat$avg_temp)
 
 # remove rows woth NAs,
 MyVars <- c( "LocalityName3", "Treatment", "Subplot", 
-             "Moss_depth", "CCI", "UCI","Soil_temp",
+             "Moss_depth", "CCI","tBiomass", "Soil_temp",
              "avenellaBM", "shrubBM", "total_SR", "moss_SR", "vasc_SR", 
-             "simpsons_moss", "simpsons_vasc", "shannon_vasc", "shannon_moss")
+              "shannon_vasc", "shannon_moss")
 SEMdat2 <- SEMdat[,MyVars]
 SEMdat3 <- na.omit(SEMdat2)
 # lost five sites (logger failed, plot not found)
@@ -2446,7 +2450,7 @@ SEMdat3 <- na.omit(SEMdat2)
 
 
 setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER")
-write.csv(SEMdat3, file = "SEMdat.csv", row.names = F)
+write.csv(SEMdat3, file = "SEMdat0810.csv", row.names = F)
 
 
 
@@ -2457,7 +2461,8 @@ write.csv(SEMdat3, file = "SEMdat.csv", row.names = F)
 #*************************************************##
 setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER")
 setwd("/home/anders/Documents/R/Git projects/soilTemperature")
-SEMdat <- read.csv("SEMdat.csv")
+SEMdat <- read.csv("SEMdat0810.csv")
+#SEMdat <- read.csv("SEMdat.csv")
 
 #housekeeping
 #str(SEMdat)
@@ -2553,45 +2558,54 @@ panel.hist <- function(x, ...){
   rect(breaks[-nB], 0, breaks[-1], y, col = "grey", ...)
 }
 
-MyVarsSR <- c("CCI", "Moss_depth", "Soil_temp", "avenellaBM", "shrubBM",
+MyVarsSR <- c("CCI", "Moss_depth", "Soil_temp", "avenellaBM", "tBiomass",
                 "total_SR", "moss_SR", "vasc_SR")
-labs <- c("CCI", "moss depth", "temp.", "Avenella", "shrubs",
+labs <- c("CCI", "moss depth", "temp.", "Avenella", "total biomass",
           "total SR", "moss SR", "vasc. SR")
 
-setwd("M:/Anders L Kolstad/R/R_projects/soilTemperature/")
-#tiff("figS1_corrMat.tiff", units = "cm", res = 300, height = 30, width = 30)
+setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
+tiff("figS1_corrMat2.tiff", units = "cm", res = 300, height = 30, width = 30)
 pairs(SEMdat[,MyVarsSR], gap = .35,
       lower.panel = panel.smooth,
       upper.panel = panel.cor,
       diag.panel = panel.hist, labels = labs,
       pch=1, col.smooth = "black", span = 0.5)
-#dev.off()
-MyVarsSh <- c("Treatment", "CCI", "Moss_depth", "Soil_temp", "avenellaBM", "shrubBM",
+dev.off()
+MyVarsSh <- c( "CCI", "Moss_depth", "Soil_temp", "avenellaBM", "tBiomass",
               "shannon_moss", "shannon_vasc")
-labs2 <- c("Treatment", "CCI", "moss depth", "temp.", "Avenella", "shrubs",
+labs2 <- c("CCI", "moss depth", "temp.", "Avenella", "total biomass",
           "Shannon\n(mosses)", "Shannon\n(vasc.)")
-#tiff("figS1b_corrMat.tiff", units = "cm", res = 300, height = 30, width = 30)
+tiff("figS1b_corrMat2.tiff", units = "cm", res = 300, height = 30, width = 30)
 pairs(SEMdat[,MyVarsSh], gap = .35,
       lower.panel = panel.smooth,
       upper.panel = panel.cor,
       diag.panel = panel.hist, labels = labs2,
       pch=1, col.smooth = "black", span = 0.5)
-#dev.off()
+dev.off()
 
 SEMplot <- aggregate(data = SEMdat, 
                      cbind(CCI, Moss_depth, Soil_temp, avenellaBM, shrubBM, total_SR, moss_SR, vasc_SR, shannon_moss, shannon_vasc) ~
                        LocalityName3+Treatment, 
                      FUN = mean)
 
+SEMplot2 <- aggregate(data = SEMdat, 
+                     cbind(CCI, Moss_depth, Soil_temp, avenellaBM, shrubBM, total_SR, moss_SR, vasc_SR, shannon_moss, shannon_vasc) ~
+                       LocalityName3, 
+                     FUN = mean)
+
 MyVarsP <- c("Treatment", "CCI", "Moss_depth", "Soil_temp", "avenellaBM", "shrubBM",
               "shannon_moss", "shannon_vasc")
 labs2 <- c("Treatment", "CCI", "moss depth", "temp.", "Avenella", "shrubs",
            "Shannon\n(mosses)", "Shannon\n(vasc.)")
+MyVarsP2 <- c( "CCI", "Moss_depth", "Soil_temp", "avenellaBM", "shrubBM",
+             "shannon_moss", "shannon_vasc")
+labs3 <- c( "CCI", "moss depth", "temp.", "Avenella", "shrubs",
+           "Shannon\n(mosses)", "Shannon\n(vasc.)")
 #tiff("figS1b_corrMat.tiff", units = "cm", res = 300, height = 30, width = 30)
-pairs(SEMplot[,MyVarsP], gap = .35,
+pairs(SEMplot2[,MyVarsP2], gap = .35,
       lower.panel = panel.smooth,
       upper.panel = panel.cor,
-      diag.panel = panel.hist, labels = labs2,
+      diag.panel = panel.hist, labels = labs3,
       pch=1, col.smooth = "black", span = 1)
 pairs(SEMplot[,MyVarsSR], gap = .35,
       lower.panel = panel.smooth,
@@ -2890,10 +2904,21 @@ plot(SEMdat$avenellaBM, SEMdat$shrubBM)
 
 
 # **Shrubs####
-shrubs <-     lme(Log_shrubBM ~ Treatment+Soil_temp_C+CCI,
+plot(SEMdat$CCI, SEMdat$Log_shrubBM)
+plot(SEMdat$Treatment, SEMdat$Log_shrubBM)
+tapply(SEMdat$Log_shrubBM, SEMdat$Treatment, FUN = mean)
+tapply(SEMdat$Log_shrubBM, SEMdat$Treatment, FUN = sd)
+sqrt(2)/5
+
+shrubs <-     lme(Log_shrubBM ~ Treatment,
                  random = ~ 1 | LocalityName3, data = SEMdat, method = "ML")
 plot(shrubs)
 qqnorm(resid(shrubs))
+plot(SEMdat$CCI, resid(shrubs))
+cor(SEMdat$CCI, SEMdat$Log_shrubBM)
+summary(shrubs)
+
+
 drop1(shrubs, test = "Chi")
 shrubs <- update(shrubs, .~. -Soil_temp_C)
 
@@ -2957,7 +2982,7 @@ shrubs4 <- glmmTMB(shrubBM+2 ~ Treatment+Moss_depth
 qqnorm(resid(shrubs4, type = "pearson")) # no
 
 # log transform
-shrubs5 <- lme(Log_shrubBM ~ Treatment+CCI+Soil_temp_C,
+shrubs5 <- lme(Log_shrubBM ~ Treatment+CCI,
                    random = ~ 1 | LocalityName3, data = SEMdat)
 qqnorm(resid(shrubs5, type = "pearson")) # tja
 qqline(resid(shrubs5, type = "pearson")) # 
@@ -3754,6 +3779,19 @@ corrs3 <- c("shannon_vasc ~~ total_SR",
             "Moss_depth ~~ Log_shrubBM",
             "avenellaBM ~~ Moss_depth")
 
+corrs <- c("shannon_vasc ~~ total_SR", 
+            "shannon_vasc ~~ vasc_SR",
+            "shannon_vasc ~~ moss_SR",
+            "shannon_vasc ~~ shannon_moss",
+            "vasc_SR ~~ shannon_moss",
+            "vasc_SR ~~ total_SR",
+            "vasc_SR ~~ moss_SR",
+            "moss_SR ~~ shannon_moss",
+            "moss_SR ~~ total_SR",
+            "shannon_moss ~~ total_SR",
+            "tBiomass ~~ avenellaBM",
+            "Moss_depth ~~ tBiomass",
+            "avenellaBM ~~ Moss_depth")
 
 
 # this one includes moss depth
@@ -3861,7 +3899,7 @@ SEMlist <- list(
                        data = SEMdat),
   #avenella =   lme(Log_avenellaBM ~ Treatment+Soil_temp_C+I(Soil_temp_C^2),
   #                 random = ~ 1 | LocalityName3, data = SEMdat),
-  shrubs =     lme(Log_shrubBM ~ Treatment+CCI,
+  shrubs =     lme(Log_shrubBM ~ Treatment,
                    random = ~ 1 | LocalityName3, data = SEMdat),
   
   # DIVERSITY 
@@ -3877,6 +3915,37 @@ SEMlist <- list(
                  random = ~1| LocalityName3, data = SEMdat))
 
 
+SEMlist0810 <- list(
+  
+  # FOREST STRUCTURE:
+  #Moss_depth = lme(Moss_depth ~ Treatment, random = ~ 1 | LocalityName3, data = SEMdat),
+  
+  CCI =        lme(CCI ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat),
+  
+  # SOIL TEMPERATURE
+  Soil_temp =  lme(Soil_temp_C ~ CCI+Treatment,
+                   random = ~ 1 | LocalityName3, data = SEMdat),
+  
+  # COMPETITIVE SPECIES
+  avenella =   glmmTMB(avenellaBM+0.1 ~ Treatment+Soil_temp_C+I(Soil_temp_C^2)
+                       + ( 1 | LocalityName3), 
+                       family = Gamma(link = "identity"), 
+                       data = SEMdat),
+  tbiomass =     lme(tBiomass ~ Treatment,
+                   random = ~ 1 | LocalityName3, data = SEMdat),
+  
+  # DIVERSITY 
+  tSR    =   lme(total_SR  ~ Treatment,
+                 random = ~1| LocalityName3, data = SEMdat),
+  vascS    = lme(shannon_vasc  ~ CCI, 
+                 random = ~1| LocalityName3, data = SEMdat),
+  mossS    = lme(shannon_moss  ~ avenellaBM+Moss_depth+I(Moss_depth^2),
+                 random = ~1| LocalityName3, data = SEMdat),
+  vSR    =  lme(vasc_SR  ~ tBiomass, 
+                random = ~1| LocalityName3, data = SEMdat),
+  mSR    =   lme(moss_SR  ~ avenellaBM+Moss_depth+I(Moss_depth^2), 
+                 random = ~1| LocalityName3, data = SEMdat))
+
 
 
 
@@ -3884,11 +3953,12 @@ SEMlist <- list(
 
 #(SEM_tSR_4_fit <- sem.fit(SEM_tSR_4, SEMdat, conditional = F,   corr.errors = corrs3)) 
 (SEM3oct       <- sem.fit(SEMlist,   SEMdat, conditional = F,   corr.errors = corrs3))
+(SEM8oct       <- sem.fit(SEMlist0810,   SEMdat, conditional = F,   corr.errors = corrs))
 
 setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
 #write.csv(SEM_tSR_4_fit, "SEM_tSR_4_modFit.csv")
 #(SEM_tSR_4_indFit <- sem.model.fits(SEM_tSR_4))  # dont work for gamma
-(SEM3oct_indFit <- sem.model.fits(SEMlist))  # dont work for gamma
+(SEM8oct_indFit <- sem.model.fits(SEMlist0810))  # dont work for gamma
 
 #write.csv(SEM_tSR_4_indFit, "SEM_tSR_4_indFit.csv")
 
@@ -3898,8 +3968,10 @@ setwd("M:\\Anders L Kolstad\\systherb data\\TEMPERATURE PAPER")
 
 (c.tabl.old <- sem.coefs(SEM_tSR_4, SEMdat, standardize = "none", intercept = F,
                      corr.errors = corrs3))
-(c.tabl <- sem.coefs(SEMlist, SEMdat, standardize = "none", intercept = F,
+(c.tabl.old2 <- sem.coefs(SEMlist, SEMdat, standardize = "none", intercept = F,
                      corr.errors = corrs3))
+(c.tabl <- sem.coefs(SEMlist0810, SEMdat, standardize = "none", intercept = F,
+                     corr.errors = corrs))
 class(c.tabl$response)
 c.tabl$response <- as.character(c.tabl$response)
 c.tabl$response[c.tabl$response == "Soil_temp_C"]  <- c("Soil temperature")
@@ -3908,7 +3980,7 @@ c.tabl$response[c.tabl$response == "Moss_depth"]  <- c("Moss depth")
 c.tabl$response[c.tabl$response == "TreatmentOpen plots"]  <- c("Herbivore exclusion") # remember to change signs
 #c.tabl$response[c.tabl$response == "UCI"]  <- c("Vegetation density")
 c.tabl$response[c.tabl$response == "avenellaBM + 0.1"]  <- c("Avenella flexuosa")
-c.tabl$response[c.tabl$response == "Log_shrubBM"]  <- c("Log(shrub biomass)")
+c.tabl$response[c.tabl$response == "tBiomas"]  <- c("total biomass")
 c.tabl$response[c.tabl$response == "shannon_vasc"]  <- c("Shannon entropy (vascular plants)")
 c.tabl$response[c.tabl$response == "shannon_moss"]  <- c("Shannon entropy (bryophytes)")
 c.tabl$response[c.tabl$response == "moss_SR"]  <- c("Species richness (bryophytes)")
@@ -3921,7 +3993,7 @@ c.tabl$response[c.tabl$response == "~~ moss_SR"]  <- c("Species richness (bryoph
 c.tabl$response[c.tabl$response == "~~ shannon_moss"]  <- c("Shannon entropy (bryophytes)")
 c.tabl$response[c.tabl$response == "~~ Moss_depth"]  <- c("Moss depth")
 c.tabl$response[c.tabl$response == "~~ CCI"]  <- c("Canopy cover")
-c.tabl$response[c.tabl$response == "~~ Log_shrubBM"]  <- c("Log(shrub biomass)")
+c.tabl$response[c.tabl$response == "~~ tBiomass"]  <- c("total biomass")
 
 c.tabl$predictor <- as.character(c.tabl$predictor)
 c.tabl$predictor[c.tabl$predictor == "~~ total_SR"]  <- c("Species richness (total)")
@@ -3930,7 +4002,7 @@ c.tabl$predictor[c.tabl$predictor == "~~ moss_SR"]  <- c("Species richness (bryo
 c.tabl$predictor[c.tabl$predictor == "~~ shannon_moss"]  <- c("Shannon entropy (bryophytes)")
 c.tabl$predictor[c.tabl$predictor == "~~ Moss_depth"]  <- c("Moss depth")
 c.tabl$predictor[c.tabl$predictor == "~~ CCI"]  <- c("Canopy cover")
-c.tabl$predictor[c.tabl$predictor == "~~ Log_shrubBM"]  <- c("Log(shrub biomass)")
+c.tabl$predictor[c.tabl$predictor == "~~ tBiomass"]  <- c("total biomass")
 c.tabl$predictor[c.tabl$predictor == "~~ avenellaBM"]  <- c("Avenella flexuosa")
 
 
@@ -3940,7 +4012,7 @@ c.tabl$predictor[c.tabl$predictor == "Moss_depth"]  <- c("Moss depth")
 c.tabl$predictor[c.tabl$predictor == "TreatmentOpen plots"]  <- c("Herbivore exclusion") # remember to change signs
 #c.tabl$predictor[c.tabl$predictor == "UCI"]  <- c("Vegetation density")
 c.tabl$predictor[c.tabl$predictor == "avenellaBM"]  <- c("Avenella flexuosa")
-c.tabl$predictor[c.tabl$predictor == "Log_shrubBM"]  <- c("Log(shrub biomass)")
+c.tabl$predictor[c.tabl$predictor == "tBiomass"]  <- c("total biomass")
 c.tabl$predictor[c.tabl$predictor == "shannon_vasc"]  <- c("Shannon entropy (vascular plants")
 c.tabl$predictor[c.tabl$predictor == "shannon_moss"]  <- c("Shannon entropy (bryophytes)")
 c.tabl$predictor[c.tabl$predictor == "moss_SR"]  <- c("Species richness (bryophytes)")
@@ -3950,7 +4022,7 @@ c.tabl$predictor[c.tabl$predictor == "I(Soil_temp_C^2)"]  <- c("Soil temperature
 c.tabl$predictor[c.tabl$predictor == "I(Moss_depth^2)"]  <- c("Moss depth ^2")
 
 
-write.csv(c.tabl, "SEM_coeff_raw07102018.csv", row.names = F)
+write.csv(c.tabl, "SEM_coeff_raw08102018.csv", row.names = F)
 
 
 #----------------------------------------------------------#
@@ -4003,20 +4075,31 @@ n3 <- ggplot(data = SEMdat,
 
 n4 <- ggplot(data = SEMdat,
              aes(x = avenellaBM,
-                 y = total_SR))+
+                 y = shannon_moss))+
   geom_point()+
   theme_classic()+
-  ylab("Total species richness") +
+  ylab("Shannon entrohy\n(mosses)") +
+  xlab(expression(italic(Avenella )~textstyle("(g m"^"-2"*")")))+
+  geom_smooth(method = "lm", se = F, colour = "black")+
+  xlim(c(0,80))
+
+~textstyle(group("(", rarefied, ")"))))
+  ggplot(data = SEMdat,
+             aes(x = avenellaBM,
+                 y = shannon_moss))+
+  geom_point()+
+  theme_classic()+
+  ylab("Shannon entrohy\n(mosses)") +
   xlab(expression(atop(paste(italic(Avenella )), paste("(g m"^"-2", ")"))))+
   geom_smooth(method = "lm", se = F, colour = "black")+
   xlim(c(0,80))
 
 n5 <- ggplot(data = SEMdat,
              aes(x = CCI,
-                 y = vasc_SR))+
+                 y = shannon_vasc))+
   geom_point()+
   theme_classic()+
-  ylab("Vascular plant\nspecies richness") +
+  ylab("Shannon entropy\n(vascular plants)") +
   xlab("Canopy cover (%)")+
   geom_smooth(method = "lm", se = F, colour = "black")
   
@@ -4034,7 +4117,7 @@ ggplot(data = SEMdat,
 # I wont include this one because refitted slope with one IV is negative but full model shows positive beta
   
 
-ggplot(data = SEMdat,
+n6 <- ggplot(data = SEMdat,
        aes(x = Moss_depth,
            y = moss_SR))+
   geom_point()+
@@ -4064,19 +4147,27 @@ ggplot(data = SEMdat,
            ylab(expression(atop(paste(italic(Avenella )), paste("(g m"^"-2", ")"))))
 
 library(grid)
-setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER/figures")
+library(gtable)
+n2g <- ggplotGrob(n2) 
+n3g <- ggplotGrob(n3)
+n1g <- ggplotGrob(n1)
+n4g <- ggplotGrob(n4)
+n5g <- ggplotGrob(n5)
+n6g <- ggplotGrob(n6)
+
+g1 <- rbind(n2g, n3g, size = "last")
+g2 <- rbind(n1g, n4g, size = "last")
+g3 <- rbind(n5g, n6g, size = "last")
+g4 <- cbind(g1, g2, g3, size = "last")
+
+#setwd("M:/Anders L Kolstad/systherb data/TEMPERATURE PAPER/figures")
 #tiff("strong_arcs.tiff", units = "cm", res = 300, height = 40, width = 10)
-tiff("strong_arcs_25x10.tiff", units = "cm", res = 300, height = 25, width = 10)
-vp <- viewport(x=0.51,y=0.5,width=0.95, height=0.95)
+#tiff("strong_arcs_25x10.tiff", units = "cm", res = 300, height = 25, width = 10)
+tiff("strong_arcs_12x20.tiff", units = "cm", res = 600, height = 12, width = 20)
+vp <- viewport(x=0.51,y=0.51,width=0.95, height=0.9)
 pushViewport(vp)
-grid.draw(rbind(ggplotGrob(n2), 
-                ggplotGrob(n3), 
-                ggplotGrob(n1), 
-                ggplotGrob(n4),
-                ggplotGrob(n5),
-                                  size = "last"))
-
-
+grid.newpage()
+grid.draw(g4)
 dev.off()
 
 
