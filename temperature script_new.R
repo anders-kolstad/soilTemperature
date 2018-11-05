@@ -392,7 +392,7 @@ gdd1 <- ggplot(data = t3.gdd3,      aes(x = Date,
     geom_ribbon( aes(      ymax = gdd.mn+1.96*gddSE, 
                            ymin = gdd.mn-1.96*gddSE,alpha = 1))+
   xlab("") +
-  ylab("Growing degree days (GDD)")+
+  ylab("Soil thawing degree days (STDD)")+
   scale_fill_discrete(
     name="Treatment",
     breaks=c("B", "UB"),
@@ -425,7 +425,7 @@ boxplot(t3.gdd_lastday2$gdd~t3.gdd_lastday2$trt)
 
 gdd2 <- ggplot(data = t3.gdd_lastday2, aes(x=trt, y=gdd))+
   geom_boxplot()+
-  ylab("GDD")+
+  ylab("STDD")+
   xlab("Treatment")+
   scale_x_discrete(breaks = c("B", "UB"),
                      labels = c("O", "E"))+
@@ -434,7 +434,7 @@ gdd2 <- ggplot(data = t3.gdd_lastday2, aes(x=trt, y=gdd))+
 library(grid)
 gdd1g <- ggplotGrob(gdd1)
 gdd2g <- ggplotGrob(gdd2)
-#tiff("GDD.tiff", height = 12, width = 12, units = "cm", res = 600)
+tiff("GDD_v2.tiff", height = 12, width = 12, units = "cm", res = 600)
 grid.draw(gdd1g)
 gdd2g <- editGrob(gdd2g, vp=viewport(x=0.7, y=0.4, width=0.4, height=0.4))
 grid.draw(gdd2g)
@@ -1200,8 +1200,11 @@ colnames(gdd_dat)[colnames(gdd_dat)=="gdd"] <- "mean"
 gdd_dat$season <- "GDD"
 summer_and_winter <- rbind(summer_and_winter, gdd_dat)
 summer_and_winter$season <- factor(summer_and_winter$season, levels =c("Summer", "Winter", "GDD"))
+levels(summer_and_winter$season)[levels(summer_and_winter$season) == "GDD"] <- "STDD"  # soil thawing degree days
 
-tiff("Fig4_new.tiff",width=12,height=12, units = "cm", res = 300)
+#summer_and_winter <- save(summer_and_winter, file ="summer_and_winter.RData")
+
+#tiff("Fig4_new.tiff",width=12,height=12, units = "cm", res = 300)
 ggplot(data = summer_and_winter, aes(x=trt, y=mean)) + 
   geom_boxplot(width = 1) + 
   theme_classic()+
