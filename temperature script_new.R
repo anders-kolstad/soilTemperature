@@ -536,7 +536,7 @@ p <-  ggplot(data = plot1dat,
                 # group = trt,
                  #linetype = trt)) 
             
-p <- p+   geom_line(size=2)   
+p <- p+   geom_line(size=1)   
 p <- p + xlab("") 
 p <- p + ylab(expression(atop(paste("Soil temp."), ( degree~C))))
 
