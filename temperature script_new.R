@@ -2146,6 +2146,31 @@ table(PInt$LocalityName2, PInt$YEAR)
 table(PInt$LocalityName2, PInt$Plot)
 # numbers are sums per quadrat
 
+
+# EDIT 22.11.2018 #
+# What species decline or increase the most? ####
+temp <- PInt
+temp2 <- melt(data = temp, id.vars = "Treatment",
+             measure.vars = names(temp[9:ncol(temp)]))
+            
+temp3 <- aggregate(data = temp2,
+                  value ~ Treatment + variable,
+                  FUN = mean, na.rm = T, drop = F)
+temp3[is.na(temp3)] <- 0
+temp4 <- dcast(data = temp3,
+               variable ~ Treatment,
+               value.var = "value",
+               fun.aggregate = mean)
+temp4$rel_diff <- temp4$UB/temp4$B
+temp5 <- temp4[order(temp4$rel_diff),]
+head(temp5)
+tail(temp5)
+# no bias towards bird dispersed seeds inside exclosures.
+
+
+# end edit ####
+
+
 SPlist <- PInt[,9:ncol(PInt)]
 #colSums(SPlist, na.rm=T)
 BLS_taxa <- c("Vaccinium myrtillus",
@@ -3921,7 +3946,7 @@ SEMlist <- list(
 SEMlist0810 <- list(
   
   # FOREST STRUCTURE:
-  #Moss_depth = lme(Moss_depth ~ Treatment, random = ~ 1 | LocalityName3, data = SEMdat),
+  Moss_depth = lme(Moss_depth ~ Treatment, random = ~ 1 | LocalityName3, data = SEMdat),
   
   CCI =        lme(CCI ~ Treatment , random = ~ 1 | LocalityName3, data = SEMdat),
   
